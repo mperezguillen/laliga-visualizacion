@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Ciclos de poder en LaLiga</title>
+
+  <meta
+    name="description"
+    content="Visualización interactiva sobre la evolución histórica del poder competitivo en LaLiga española."
+  />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+
+<body>
+  <header class="hero">
+    <div class="hero__content">
+      <p class="eyebrow">Visualización de Datos · LaLiga histórica</p>
+
+      <h1>Ciclos de poder en LaLiga</h1>
+
+      <p class="subtitle">
+        Dominio, regularidad, caídas y recuperaciones históricas desde 1929 hasta 2020.
+      </p>
+
+      <p class="hero__text">
+        Esta visualización analiza la Liga española como una historia de poder competitivo:
+        qué clubes dominaron cada etapa, cuáles fueron regulares durante décadas y cómo han
+        cambiado los equilibrios deportivos a lo largo del tiempo.
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section class="section section--intro">
+      <div class="section__header">
+        <p class="section__kicker">01 · Contexto</p>
+        <h2>Un siglo de competición, con una interrupción histórica</h2>
+      </div>
+
+      <div class="card">
+        <p>
+          El dataset cubre las temporadas desde <strong>1929-30</strong> hasta
+          <strong>2019-20</strong>. No incluye las temporadas
+          <strong>1936-37</strong>, <strong>1937-38</strong> y
+          <strong>1938-39</strong>, correspondientes al periodo de la Guerra Civil española.
+        </p>
+
+        <div class="timeline-note">
+          <span>1929-30</span>
+          <span class="timeline-gap">1936-39 · interrupción</span>
+          <span>2019-20</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--chart">
+      <div class="section__header">
+        <p class="section__kicker">02 · Evolución histórica</p>
+        <h2>¿Cómo han cambiado las posiciones de los grandes equipos?</h2>
+
+        <p>
+          El siguiente gráfico muestra la posición final de los equipos seleccionados en cada
+          temporada. Cuanto más arriba aparece una línea, mejor fue la clasificación del equipo.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Equipos</h3>
+
+          <p class="small">
+            Selecciona uno o varios equipos para compararlos.
+          </p>
+
+          <select id="team-select" multiple size="10" aria-label="Selector de equipos"></select>
+
+          <p class="small muted">
+            Consejo: usa Ctrl/Cmd para seleccionar varios equipos.
+          </p>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3>Bump chart de posiciones históricas</h3>
+            <p id="chart-status" class="small muted">Cargando datos...</p>
+          </div>
+
+          <div id="bump-chart" class="chart" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__header">
+        <p class="section__kicker">03 · Eras de dominio</p>
+        <h2>¿Qué equipos dominaron cada década?</h2>
+      </div>
+
+      <div class="placeholder card">
+        <p>
+          Próxima iteración: heatmap por equipo y década usando posición media,
+          frecuencia en top 3 o performance media.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__header">
+        <p class="section__kicker">04 · Concentración del éxito</p>
+        <h2>¿LaLiga ha sido cada vez más concentrada?</h2>
+      </div>
+
+      <div class="placeholder card">
+        <p>
+          Próxima iteración: número de campeones distintos por década y concentración
+          del top 3.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__header">
+        <p class="section__kicker">05 · Caídas y recuperaciones</p>
+        <h2>Grandes cambios de rendimiento entre temporadas</h2>
+      </div>
+
+      <div class="placeholder card">
+        <p>
+          Próxima iteración: gráfico de mayores subidas y mayores caídas en posición
+          o performance.
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__header">
+        <p class="section__kicker">06 · Regularidad histórica</p>
+        <h2>Regularidad frente a dominio</h2>
+      </div>
+
+      <div class="placeholder card">
+        <p>
+          Próxima iteración: scatter plot con posición media, variabilidad y número
+          de temporadas disputadas.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Proyecto académico de Visualización de Datos · Dataset histórico de LaLiga.
+    </p>
+  </footer>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

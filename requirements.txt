@@ -1,0 +1,5 @@
+# Dependencias Python del proyecto
+# Actualmente no hay dependencias externas necesarias.
+#
+# Python se usa únicamente para levantar un servidor local:
+# python -m http.server 8000
