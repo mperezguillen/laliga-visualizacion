@@ -1,12 +1,19 @@
 import { loadLaligaData } from "./data-processing.js";
-import { renderBumpChart } from "./charts.js";
+import {
+  renderBumpChart,
+  renderDominanceHeatmap,
+  renderSuccessConcentrationChart
+} from "./charts.js";
 
 const state = {
   data: [],
   selectedTeams: [],
   selectedMetric: "Position",
   startYear: null,
-  endYear: null
+  endYear: null,
+  dominanceMetric: "top3Share",
+  dominanceTopN: 12,
+  successMetric: "uniqueChampions"
 };
 
 init();
@@ -29,6 +36,8 @@ async function init() {
     setupMetricSelector();
     setupSeasonSelectors(data);
     setupQuickCompareButtons(data);
+    setupDominanceControls();
+    setupSuccessControls();
     updateStatus();
 
     render();
@@ -178,6 +187,81 @@ function setupQuickCompareButtons(data) {
   }
 }
 
+function setupDominanceControls() {
+  const metricSelector = document.querySelector("#dominance-metric-select");
+  const teamCountSelector = document.querySelector("#dominance-team-count");
+
+  if (metricSelector) {
+    metricSelector.value = state.dominanceMetric;
+
+    metricSelector.addEventListener("change", () => {
+      state.dominanceMetric = metricSelector.value;
+      render();
+    });
+  }
+
+  if (teamCountSelector) {
+    teamCountSelector.value = String(state.dominanceTopN);
+
+    teamCountSelector.addEventListener("change", () => {
+      state.dominanceTopN = Number(teamCountSelector.value);
+      render();
+    });
+  }
+}
+
+function updateDominanceStatus(summary) {
+  const status = document.querySelector("#dominance-status");
+
+  if (!status || !summary) {
+    return;
+  }
+
+  status.textContent =
+    `${summary.teams} equipos · ` +
+    `${summary.decades} décadas · ` +
+    `${summary.metricLabel}`;
+}
+
+function setupSuccessControls() {
+  const metricSelector = document.querySelector("#success-metric-select");
+
+  if (!metricSelector) {
+    return;
+  }
+
+  metricSelector.value = state.successMetric;
+
+  metricSelector.addEventListener("change", () => {
+    state.successMetric = metricSelector.value;
+    render();
+  });
+}
+
+function getFilteredData() {
+  return state.data.filter((d) => {
+    return (
+      Number.isFinite(d.SeasonStart) &&
+      d.SeasonStart >= state.startYear &&
+      d.SeasonStart <= state.endYear
+    );
+  });
+}
+
+function updateSuccessStatus(summary) {
+  const status = document.querySelector("#success-status");
+  const description = document.querySelector("#success-metric-description");
+
+  if (status && summary) {
+    status.textContent =
+      `${summary.decades} décadas · ${summary.metricLabel}`;
+  }
+
+  if (description && summary) {
+    description.textContent = summary.description;
+  }
+}
+
 function render() {
   const filteredData = getFilteredData();
 
@@ -187,16 +271,20 @@ function render() {
     metric: state.selectedMetric
   });
 
-  updateStatus(filteredData);
-}
-
-function getFilteredData() {
-  return state.data.filter((d) => {
-    return (
-      d.SeasonStart >= state.startYear &&
-      d.SeasonStart <= state.endYear
-    );
+  const dominanceSummary = renderDominanceHeatmap(state.data, {
+    container: "#dominance-heatmap",
+    metric: state.dominanceMetric,
+    topN: state.dominanceTopN
   });
+
+  const successSummary = renderSuccessConcentrationChart(state.data, {
+    container: "#success-concentration-chart",
+    metric: state.successMetric
+  });
+
+  updateStatus(filteredData);
+  updateDominanceStatus(dominanceSummary);
+  updateSuccessStatus(successSummary);
 }
 
 function updateStatus(data = state.data) {

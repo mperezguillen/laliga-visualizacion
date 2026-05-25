@@ -138,31 +138,115 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section section--chart" id="eras-dominio">
       <div class="section__header">
         <p class="section__kicker">03 · Eras de dominio</p>
         <h2>¿Qué equipos dominaron cada década?</h2>
+
+        <p>
+          El heatmap resume el dominio competitivo por décadas. Cada fila representa un equipo
+          y cada columna una década. Las celdas más intensas indican una presencia más fuerte
+          en la zona alta de la clasificación.
+        </p>
       </div>
 
-      <div class="placeholder card">
-        <p>
-          Próxima iteración: heatmap por equipo y década usando posición media,
-          frecuencia en top 3 o performance media.
-        </p>
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Lectura del heatmap</h3>
+
+          <div class="control-group">
+            <label for="dominance-metric-select">Métrica de dominio</label>
+
+            <select
+              id="dominance-metric-select"
+              class="compact-select"
+              aria-label="Selector de métrica de dominio"
+            >
+              <option value="top3Share">Frecuencia en top 3</option>
+              <option value="top5Share">Frecuencia en top 5</option>
+              <option value="championShare">Temporadas campeón</option>
+              <option value="avgPerformance">Performance media</option>
+              <option value="avgPosition">Posición media</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="dominance-team-count">Equipos visibles</label>
+
+            <select
+              id="dominance-team-count"
+              class="compact-select"
+              aria-label="Número de equipos visibles en el heatmap"
+            >
+              <option value="8">Top 8 histórico</option>
+              <option value="12" selected>Top 12 histórico</option>
+              <option value="16">Top 16 histórico</option>
+              <option value="20">Top 20 histórico</option>
+            </select>
+          </div>
+
+          <p class="small muted">
+            Para mantener la lectura clara, el gráfico muestra los equipos con mayor presencia
+            histórica en la zona alta de la clasificación.
+          </p>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3>Mapa de calor por década</h3>
+            <p id="dominance-status" class="small muted">Cargando datos...</p>
+          </div>
+
+          <div id="dominance-heatmap" class="chart" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section section--chart" id="concentracion-exito">
       <div class="section__header">
         <p class="section__kicker">04 · Concentración del éxito</p>
         <h2>¿LaLiga ha sido cada vez más concentrada?</h2>
+
+        <p>
+          Esta sección analiza si el éxito deportivo se repartió entre muchos clubes o si,
+          por el contrario, quedó concentrado en unos pocos equipos. La lectura por décadas
+          permite distinguir etapas más abiertas de periodos de dominio más cerrado.
+        </p>
       </div>
 
-      <div class="placeholder card">
-        <p>
-          Próxima iteración: número de campeones distintos por década y concentración
-          del top 3.
-        </p>
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Indicador</h3>
+
+          <div class="control-group">
+            <label for="success-metric-select">Métrica de concentración</label>
+
+            <select
+              id="success-metric-select"
+              class="compact-select"
+              aria-label="Selector de métrica de concentración"
+            >
+              <option value="uniqueChampions">Campeones distintos</option>
+              <option value="uniqueTop3Teams">Equipos distintos en top 3</option>
+              <option value="top3Concentration">Concentración del top 3</option>
+              <option value="championConcentration">Concentración de títulos</option>
+            </select>
+          </div>
+
+          <div class="metric-explanation small muted" id="success-metric-description">
+            Cuantos más campeones distintos aparecen en una década, más abierto fue el reparto
+            de títulos.
+          </div>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3>Apertura y concentración por década</h3>
+            <p id="success-status" class="small muted">Cargando datos...</p>
+          </div>
+
+          <div id="success-concentration-chart" class="chart" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 
