@@ -69,17 +69,62 @@
 
       <div class="layout">
         <aside class="controls card">
-          <h3>Equipos</h3>
+          <h3>Controles</h3>
 
-          <p class="small">
+          <div class="control-group">
+            <label for="metric-select">Métrica</label>
+            <select id="metric-select" aria-label="Selector de métrica">
+            <option value="Position">Posición final</option>
+            <option value="Points">Puntos</option>
+            <option value="WinRate">Porcentaje de victorias</option>
+            <option value="Performance">Performance</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label>Rango temporal</label>
+
+            <div class="range-controls">
+            <select id="start-season" aria-label="Temporada inicial"></select>
+            <select id="end-season" aria-label="Temporada final"></select>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="team-select">Equipos</label>
+
+            <p class="small">
             Selecciona uno o varios equipos para compararlos.
-          </p>
+            </p>
 
-          <select id="team-select" multiple size="10" aria-label="Selector de equipos"></select>
+            <select id="team-select" multiple size="10" aria-label="Selector de equipos"></select>
 
-          <p class="small muted">
+            <p class="small muted">
             Consejo: usa Ctrl/Cmd para seleccionar varios equipos.
-          </p>
+            </p>
+          </div>
+
+          <div class="control-group">
+            <label>Comparaciones rápidas</label>
+
+            <div class="button-stack">
+            <button class="secondary-button quick-compare" data-teams="Real Madrid|Barcelona">
+                Real Madrid vs Barcelona
+            </button>
+
+            <button class="secondary-button quick-compare" data-teams="Real Madrid|Barcelona|Atlético Madrid">
+                Tres grandes históricos
+            </button>
+
+            <button class="secondary-button quick-compare" data-teams="Valencia|Sevilla|Athletic Club">
+                Alternativas históricas
+            </button>
+
+            <button id="reset-selection" class="secondary-button">
+                Selección inicial
+            </button>
+            </div>
+          </div>
         </aside>
 
         <div class="chart-card card">

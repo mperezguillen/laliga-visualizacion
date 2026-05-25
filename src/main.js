@@ -3,7 +3,10 @@ import { renderBumpChart } from "./charts.js";
 
 const state = {
   data: [],
-  selectedTeams: []
+  selectedTeams: [],
+  selectedMetric: "Position",
+  startYear: null,
+  endYear: null
 };
 
 init();
@@ -15,11 +18,19 @@ async function init() {
     state.data = data;
     state.selectedTeams = getDefaultTeams(data);
 
+    const years = getAvailableYears(data);
+    state.startYear = years[0];
+    state.endYear = years[years.length - 1];
+
     console.log("Datos de LaLiga cargados:", data);
     console.table(data.slice(0, 10));
 
     setupTeamSelector(data);
-    updateStatus(data);
+    setupMetricSelector();
+    setupSeasonSelectors(data);
+    setupQuickCompareButtons(data);
+    updateStatus();
+
     render();
 
     window.addEventListener("resize", debounce(render, 150));
@@ -51,9 +62,7 @@ function setupTeamSelector(data) {
     return;
   }
 
-  const teams = Array.from(new Set(data.map((d) => d.Team))).sort((a, b) =>
-    a.localeCompare(b, "es")
-  );
+  const teams = getTeams(data);
 
   selector.innerHTML = "";
 
@@ -74,20 +83,123 @@ function setupTeamSelector(data) {
   });
 }
 
-function render() {
-  renderBumpChart(state.data, {
-    container: "#bump-chart",
-    selectedTeams: state.selectedTeams
+function setupMetricSelector() {
+  const selector = document.querySelector("#metric-select");
+
+  if (!selector) {
+    return;
+  }
+
+  selector.value = state.selectedMetric;
+
+  selector.addEventListener("change", () => {
+    state.selectedMetric = selector.value;
+    render();
+  });
+}
+
+function setupSeasonSelectors(data) {
+  const startSelector = document.querySelector("#start-season");
+  const endSelector = document.querySelector("#end-season");
+
+  if (!startSelector || !endSelector) {
+    return;
+  }
+
+  const years = getAvailableYears(data);
+
+  startSelector.innerHTML = "";
+  endSelector.innerHTML = "";
+
+  for (const year of years) {
+    const startOption = document.createElement("option");
+    startOption.value = year;
+    startOption.textContent = year;
+
+    const endOption = document.createElement("option");
+    endOption.value = year;
+    endOption.textContent = year;
+
+    startSelector.append(startOption);
+    endSelector.append(endOption);
+  }
+
+  startSelector.value = state.startYear;
+  endSelector.value = state.endYear;
+
+  startSelector.addEventListener("change", () => {
+    state.startYear = Number(startSelector.value);
+
+    if (state.startYear > state.endYear) {
+      state.endYear = state.startYear;
+      endSelector.value = state.endYear;
+    }
+
+    render();
   });
 
-  const status = document.querySelector("#chart-status");
+  endSelector.addEventListener("change", () => {
+    state.endYear = Number(endSelector.value);
 
-  if (status) {
-    status.textContent = `${state.selectedTeams.length} equipo(s) seleccionado(s)`;
+    if (state.endYear < state.startYear) {
+      state.startYear = state.endYear;
+      startSelector.value = state.startYear;
+    }
+
+    render();
+  });
+}
+
+function setupQuickCompareButtons(data) {
+  const buttons = document.querySelectorAll(".quick-compare");
+  const resetButton = document.querySelector("#reset-selection");
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const aliases = button.dataset.teams.split("|");
+
+      state.selectedTeams = aliases
+        .map((alias) => findTeamByAlias(data, alias))
+        .filter(Boolean);
+
+      state.selectedTeams = Array.from(new Set(state.selectedTeams));
+
+      syncTeamSelector();
+      render();
+    });
+  });
+
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      state.selectedTeams = getDefaultTeams(data);
+      syncTeamSelector();
+      render();
+    });
   }
 }
 
-function updateStatus(data) {
+function render() {
+  const filteredData = getFilteredData();
+
+  renderBumpChart(filteredData, {
+    container: "#bump-chart",
+    selectedTeams: state.selectedTeams,
+    metric: state.selectedMetric
+  });
+
+  updateStatus(filteredData);
+}
+
+function getFilteredData() {
+  return state.data.filter((d) => {
+    return (
+      d.SeasonStart >= state.startYear &&
+      d.SeasonStart <= state.endYear
+    );
+  });
+}
+
+function updateStatus(data = state.data) {
   const status = document.querySelector("#chart-status");
 
   if (!status) {
@@ -97,36 +209,77 @@ function updateStatus(data) {
   const seasons = Array.from(new Set(data.map((d) => d.Season)));
   const teams = Array.from(new Set(data.map((d) => d.Team)));
 
-  status.textContent = `${data.length} registros · ${seasons.length} temporadas · ${teams.length} equipos`;
+  status.textContent =
+    `${data.length} registros · ` +
+    `${seasons.length} temporadas · ` +
+    `${teams.length} equipos · ` +
+    `${state.selectedTeams.length} seleccionado(s)`;
+}
+
+function syncTeamSelector() {
+  const selector = document.querySelector("#team-select");
+
+  if (!selector) {
+    return;
+  }
+
+  for (const option of selector.options) {
+    option.selected = state.selectedTeams.includes(option.value);
+  }
 }
 
 function getDefaultTeams(data) {
-  const teams = Array.from(new Set(data.map((d) => d.Team)));
-
   const preferredNames = [
     "Real Madrid",
-    "FC Barcelona",
     "Barcelona",
     "Atlético Madrid",
-    "Atletico Madrid",
     "Athletic Club",
     "Valencia",
     "Sevilla"
   ];
 
-  const selected = [];
+  return preferredNames
+    .map((name) => findTeamByAlias(data, name))
+    .filter(Boolean)
+    .filter((team, index, array) => array.indexOf(team) === index)
+    .slice(0, 5);
+}
 
-  for (const preferred of preferredNames) {
-    const match = teams.find((team) =>
-      normalizeText(team).includes(normalizeText(preferred))
-    );
+function findTeamByAlias(data, alias) {
+  const teams = getTeams(data);
+  const normalizedAlias = normalizeText(alias);
 
-    if (match && !selected.includes(match)) {
-      selected.push(match);
-    }
+  let match = teams.find((team) => normalizeText(team) === normalizedAlias);
+
+  if (match) {
+    return match;
   }
 
-  return selected.slice(0, 5);
+  match = teams.find((team) =>
+    normalizeText(team).includes(normalizedAlias)
+  );
+
+  if (match) {
+    return match;
+  }
+
+  match = teams.find((team) =>
+    normalizedAlias.includes(normalizeText(team))
+  );
+
+  return match ?? null;
+}
+
+function getTeams(data) {
+  return Array.from(new Set(data.map((d) => d.Team))).sort((a, b) =>
+    a.localeCompare(b, "es")
+  );
+}
+
+function getAvailableYears(data) {
+  return Array.from(new Set(data.map((d) => d.SeasonStart)))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
 }
 
 function normalizeText(text) {
