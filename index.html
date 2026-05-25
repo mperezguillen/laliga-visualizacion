@@ -250,17 +250,78 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section section--chart" id="caidas-recuperaciones">
       <div class="section__header">
         <p class="section__kicker">05 · Caídas y recuperaciones</p>
-        <h2>Grandes cambios de rendimiento entre temporadas</h2>
+        <h2>Grandes caídas y recuperaciones históricas</h2>
+
+        <p>
+          Esta sección identifica los mayores cambios de rendimiento de un equipo entre
+          dos temporadas consecutivas. La comparación evita unir temporadas separadas por
+          huecos históricos o por ausencias del equipo en Primera División.
+        </p>
       </div>
 
-      <div class="placeholder card">
-        <p>
-          Próxima iteración: gráfico de mayores subidas y mayores caídas en posición
-          o performance.
-        </p>
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Cambios entre temporadas</h3>
+
+          <div class="control-group">
+            <label for="change-type-select">Tipo de cambio</label>
+
+            <select
+              id="change-type-select"
+              class="compact-select"
+              aria-label="Selector de tipo de cambio"
+            >
+              <option value="recoveries">Recuperaciones</option>
+              <option value="falls">Caídas</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="change-metric-select">Métrica</label>
+
+            <select
+              id="change-metric-select"
+              class="compact-select"
+              aria-label="Selector de métrica de cambios"
+            >
+              <option value="Performance" selected>Performance</option>
+              <option value="Position">Posición final</option>
+              <option value="Points">Puntos</option>
+              <option value="WinRate">Porcentaje de victorias</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="change-count-select">Número de casos</label>
+
+            <select
+              id="change-count-select"
+              class="compact-select"
+              aria-label="Número de cambios visibles"
+            >
+              <option value="8">Top 8</option>
+              <option value="10" selected>Top 10</option>
+              <option value="15">Top 15</option>
+            </select>
+          </div>
+
+          <div class="metric-explanation small muted" id="change-metric-description">
+            Performance mide el rendimiento conseguido respecto al máximo posible de puntos.
+            Es la métrica más comparable entre temporadas.
+          </div>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3>Mayores cambios entre temporadas consecutivas</h3>
+            <p id="changes-status" class="small muted">Cargando datos...</p>
+          </div>
+
+          <div id="historical-changes-chart" class="chart" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 

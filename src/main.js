@@ -2,7 +2,8 @@ import { loadLaligaData } from "./data-processing.js";
 import {
   renderBumpChart,
   renderDominanceHeatmap,
-  renderSuccessConcentrationChart
+  renderSuccessConcentrationChart,
+  renderHistoricalChangesChart
 } from "./charts.js";
 
 const state = {
@@ -13,7 +14,10 @@ const state = {
   endYear: null,
   dominanceMetric: "top3Share",
   dominanceTopN: 12,
-  successMetric: "uniqueChampions"
+  successMetric: "uniqueChampions",
+  changeType: "recoveries",
+  changeMetric: "Performance",
+  changeTopN: 10
 };
 
 init();
@@ -38,6 +42,7 @@ async function init() {
     setupQuickCompareButtons(data);
     setupDominanceControls();
     setupSuccessControls();
+    setupChangesControls();
     updateStatus();
 
     render();
@@ -238,6 +243,55 @@ function setupSuccessControls() {
   });
 }
 
+function setupChangesControls() {
+  const changeTypeSelector = document.querySelector("#change-type-select");
+  const changeMetricSelector = document.querySelector("#change-metric-select");
+  const changeCountSelector = document.querySelector("#change-count-select");
+
+  if (changeTypeSelector) {
+    changeTypeSelector.value = state.changeType;
+
+    changeTypeSelector.addEventListener("change", () => {
+      state.changeType = changeTypeSelector.value;
+      render();
+    });
+  }
+
+  if (changeMetricSelector) {
+    changeMetricSelector.value = state.changeMetric;
+
+    changeMetricSelector.addEventListener("change", () => {
+      state.changeMetric = changeMetricSelector.value;
+      render();
+    });
+  }
+
+  if (changeCountSelector) {
+    changeCountSelector.value = String(state.changeTopN);
+
+    changeCountSelector.addEventListener("change", () => {
+      state.changeTopN = Number(changeCountSelector.value);
+      render();
+    });
+  }
+}
+
+function updateChangesStatus(summary) {
+  const status = document.querySelector("#changes-status");
+  const description = document.querySelector("#change-metric-description");
+
+  if (status && summary) {
+    status.textContent =
+      `${summary.cases} casos · ` +
+      `${summary.changeTypeLabel} · ` +
+      `${summary.metricLabel}`;
+  }
+
+  if (description && summary) {
+    description.textContent = summary.description;
+  }
+}
+
 function getFilteredData() {
   return state.data.filter((d) => {
     return (
@@ -282,9 +336,17 @@ function render() {
     metric: state.successMetric
   });
 
+  const changesSummary = renderHistoricalChangesChart(state.data, {
+    container: "#historical-changes-chart",
+    metric: state.changeMetric,
+    changeType: state.changeType,
+    topN: state.changeTopN
+  });
+
   updateStatus(filteredData);
   updateDominanceStatus(dominanceSummary);
   updateSuccessStatus(successSummary);
+  updateChangesStatus(changesSummary);
 }
 
 function updateStatus(data = state.data) {

@@ -319,3 +319,11 @@ label {
   background: #f4f1e8;
   border: 1px solid var(--color-border);
 }
+
+#historical-changes-chart {
+  min-height: 460px;
+}
+
+#historical-changes-chart svg {
+  max-width: none;
+}

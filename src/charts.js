@@ -123,6 +123,48 @@ const SUCCESS_METRIC_CONFIG = {
   }
 };
 
+const CHANGE_METRIC_CONFIG = {
+  Performance: {
+    label: "Performance",
+    description:
+      "Performance mide el rendimiento conseguido respecto al máximo posible de puntos. Es la métrica más comparable entre temporadas.",
+    unit: "puntos porcentuales",
+    betterWhen: "higher",
+    format: (value) => `${(value * 100).toFixed(1)}%`,
+    formatChange: (value) => `${(value * 100).toFixed(1)} pp`
+  },
+
+  Position: {
+    label: "Posición final",
+    description:
+      "En posición final, una recuperación significa acabar más arriba en la tabla; una caída significa terminar en una posición peor.",
+    unit: "posiciones",
+    betterWhen: "lower",
+    format: (value) => `${value}.ª`,
+    formatChange: (value) => `${value.toFixed(0)} posiciones`
+  },
+
+  Points: {
+    label: "Puntos",
+    description:
+      "Los puntos muestran cambios brutos de rendimiento, aunque son menos comparables entre épocas con distinto número de partidos.",
+    unit: "puntos",
+    betterWhen: "higher",
+    format: (value) => `${value} puntos`,
+    formatChange: (value) => `${value.toFixed(0)} puntos`
+  },
+
+  WinRate: {
+    label: "Porcentaje de victorias",
+    description:
+      "El porcentaje de victorias permite comparar la eficacia ganadora entre temporadas consecutivas.",
+    unit: "puntos porcentuales",
+    betterWhen: "higher",
+    format: (value) => `${(value * 100).toFixed(1)}%`,
+    formatChange: (value) => `${(value * 100).toFixed(1)} pp`
+  }
+};
+
 export function renderBumpChart(data, options = {}) {
   const {
     container,
@@ -508,6 +550,142 @@ export function renderSuccessConcentrationChart(data, options = {}) {
   };
 }
 
+export function renderHistoricalChangesChart(data, options = {}) {
+  const {
+    container,
+    metric = "Performance",
+    changeType = "recoveries",
+    topN = 10
+  } = options;
+
+  const metricConfig =
+    CHANGE_METRIC_CONFIG[metric] ?? CHANGE_METRIC_CONFIG.Performance;
+
+  const element =
+    typeof container === "string"
+      ? document.querySelector(container)
+      : container;
+
+  if (!element) {
+    throw new Error("No se ha encontrado el contenedor del gráfico de cambios.");
+  }
+
+  element.innerHTML = "";
+
+  const allChanges = buildSeasonToSeasonChanges(data, metric, metricConfig);
+
+  const selectedChanges = allChanges
+    .filter((row) =>
+      changeType === "recoveries"
+        ? row.Improvement > 0
+        : row.Fall > 0
+    )
+    .sort((a, b) =>
+      changeType === "recoveries"
+        ? b.Improvement - a.Improvement
+        : b.Fall - a.Fall
+    )
+    .slice(0, topN)
+    .map((row) => {
+      const magnitude =
+        changeType === "recoveries" ? row.Improvement : row.Fall;
+
+      return {
+        ...row,
+        Magnitude: magnitude,
+        SignedValue: changeType === "recoveries" ? magnitude : -magnitude,
+        EventLabel: `${row.Team} · ${row.PreviousSeason} → ${row.CurrentSeason}`,
+        ChangeLabel:
+          changeType === "recoveries"
+            ? `+${metricConfig.formatChange(magnitude)}`
+            : `-${metricConfig.formatChange(magnitude)}`
+      };
+    })
+    .reverse();
+
+  if (selectedChanges.length === 0) {
+    element.innerHTML = `
+      <p class="muted">
+        No hay datos suficientes para calcular cambios entre temporadas consecutivas.
+      </p>
+    `;
+
+    return null;
+  }
+
+  const maxAbsValue = Math.max(
+    ...selectedChanges.map((row) => Math.abs(row.SignedValue))
+  );
+
+  const xDomain =
+    changeType === "recoveries"
+      ? [0, maxAbsValue * 1.18]
+      : [-maxAbsValue * 1.18, 0];
+
+  const width = Math.max(820, element.clientWidth || 950);
+  const height = Math.max(440, 120 + selectedChanges.length * 34);
+
+  const chart = Plot.plot({
+    width,
+    height,
+    marginTop: 32,
+    marginRight: 110,
+    marginBottom: 56,
+    marginLeft: 260,
+
+    x: {
+      label:
+        changeType === "recoveries"
+          ? `Mejora en ${metricConfig.label}`
+          : `Empeoramiento en ${metricConfig.label}`,
+      domain: xDomain,
+      grid: true,
+      tickFormat: (value) =>
+        metric === "Position"
+          ? String(Math.abs(value))
+          : metricConfig.formatChange(Math.abs(value))
+    },
+
+    y: {
+      label: null
+    },
+
+    marks: [
+      Plot.ruleX([0]),
+
+      Plot.barX(selectedChanges, {
+        x: "SignedValue",
+        y: "EventLabel",
+        fill: changeType === "recoveries" ? "#8b1e2d" : "#4a4a4a",
+        fillOpacity: 0.84,
+        title: "Tooltip"
+      }),
+
+      Plot.text(selectedChanges, {
+        x: "SignedValue",
+        y: "EventLabel",
+        text: "ChangeLabel",
+        dx: changeType === "recoveries" ? 8 : -8,
+        textAnchor: changeType === "recoveries" ? "start" : "end",
+        fill: "#1d1d1f",
+        fontSize: 11,
+        fontWeight: 700,
+        title: "Tooltip"
+      })
+    ]
+  });
+
+  element.append(chart);
+
+  return {
+    cases: selectedChanges.length,
+    metricLabel: metricConfig.label,
+    changeTypeLabel:
+      changeType === "recoveries" ? "Recuperaciones" : "Caídas",
+    description: metricConfig.description
+  };
+}
+
 function formatBumpTooltip(d, metric, metricConfig) {
   const metricValue = Number.isFinite(d[metric])
     ? metricConfig.format(d[metric])
@@ -838,5 +1016,118 @@ function formatSuccessTooltip(row, metricConfig) {
     `Títulos del campeón más repetido: ${row.DominantChampionTitles}`,
     `Tres clubes más presentes en top 3: ${top3Teams}`,
     `Plazas totales de top 3: ${row.Top3Slots}`
+  ].join("\n");
+}
+
+function buildSeasonToSeasonChanges(data, metric, metricConfig) {
+  const byTeam = new Map();
+
+  for (const row of data) {
+    if (
+      !row.Team ||
+      !Number.isFinite(row.SeasonStart) ||
+      !Number.isFinite(row[metric])
+    ) {
+      continue;
+    }
+
+    if (!byTeam.has(row.Team)) {
+      byTeam.set(row.Team, []);
+    }
+
+    byTeam.get(row.Team).push(row);
+  }
+
+  const changes = [];
+
+  for (const [team, rows] of byTeam.entries()) {
+    const sortedRows = rows
+      .slice()
+      .sort((a, b) => a.SeasonStart - b.SeasonStart);
+
+    for (let index = 1; index < sortedRows.length; index += 1) {
+      const previous = sortedRows[index - 1];
+      const current = sortedRows[index];
+
+      if (!areComparableConsecutiveSeasons(previous, current)) {
+        continue;
+      }
+
+      const previousValue = previous[metric];
+      const currentValue = current[metric];
+
+      const rawChange = currentValue - previousValue;
+
+      const improvement =
+        metricConfig.betterWhen === "higher"
+          ? rawChange
+          : -rawChange;
+
+      const fall =
+        metricConfig.betterWhen === "higher"
+          ? -rawChange
+          : rawChange;
+
+      changes.push({
+        Team: team,
+        PreviousSeason: previous.Season,
+        CurrentSeason: current.Season,
+        PreviousSeasonStart: previous.SeasonStart,
+        CurrentSeasonStart: current.SeasonStart,
+        PreviousValue: previousValue,
+        CurrentValue: currentValue,
+        RawChange: rawChange,
+        Improvement: improvement,
+        Fall: fall,
+        Tooltip: formatChangeTooltip({
+          team,
+          previous,
+          current,
+          metric,
+          metricConfig,
+          improvement,
+          fall
+        })
+      });
+    }
+  }
+
+  return changes;
+}
+
+function areComparableConsecutiveSeasons(previous, current) {
+  return current.SeasonStart - previous.SeasonStart === 1;
+}
+
+function formatChangeTooltip({
+  team,
+  previous,
+  current,
+  metric,
+  metricConfig,
+  improvement,
+  fall
+}) {
+  const direction =
+    improvement > 0
+      ? "Recuperación"
+      : fall > 0
+        ? "Caída"
+        : "Sin cambio";
+
+  const magnitude = Math.max(improvement, fall, 0);
+
+  return [
+    `Equipo: ${team}`,
+    `Cambio: ${direction}`,
+    `Temporadas: ${previous.Season} → ${current.Season}`,
+    `Métrica: ${metricConfig.label}`,
+    `Valor anterior: ${metricConfig.format(previous[metric])}`,
+    `Valor posterior: ${metricConfig.format(current[metric])}`,
+    `Magnitud: ${metricConfig.formatChange(magnitude)}`,
+    `Posición anterior: ${previous.Position}.ª`,
+    `Posición posterior: ${current.Position}.ª`,
+    `Puntos anteriores: ${previous.Points}`,
+    `Puntos posteriores: ${current.Points}`
   ].join("\n");
 }
