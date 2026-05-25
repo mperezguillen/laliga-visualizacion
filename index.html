@@ -325,17 +325,67 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section section--chart" id="regularidad-dominio">
       <div class="section__header">
         <p class="section__kicker">06 · Regularidad histórica</p>
         <h2>Regularidad frente a dominio</h2>
+
+        <p>
+          No todos los equipos históricos han seguido el mismo patrón. Algunos dominaron durante
+          muchas temporadas, otros fueron muy regulares sin ganar tanto, y otros alternaron grandes
+          campañas con caídas pronunciadas. Este gráfico resume esas trayectorias.
+        </p>
       </div>
 
-      <div class="placeholder card">
-        <p>
-          Próxima iteración: scatter plot con posición media, variabilidad y número
-          de temporadas disputadas.
-        </p>
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Lectura del gráfico</h3>
+
+          <div class="control-group">
+            <label for="regularity-min-seasons">Temporadas mínimas</label>
+
+            <select
+              id="regularity-min-seasons"
+              class="compact-select"
+              aria-label="Selector de temporadas mínimas"
+            >
+              <option value="1">Todas</option>
+              <option value="5">Mínimo 5 temporadas</option>
+              <option value="10" selected>Mínimo 10 temporadas</option>
+              <option value="20">Mínimo 20 temporadas</option>
+              <option value="40">Mínimo 40 temporadas</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="regularity-label-count">Etiquetas visibles</label>
+
+            <select
+              id="regularity-label-count"
+              class="compact-select"
+              aria-label="Selector de etiquetas visibles"
+            >
+              <option value="0">Sin etiquetas</option>
+              <option value="8">Top 8</option>
+              <option value="12" selected>Top 12</option>
+              <option value="20">Top 20</option>
+            </select>
+          </div>
+
+          <div class="metric-explanation small muted">
+            Cuanto más a la izquierda, mejor posición media histórica. Cuanto más abajo,
+            menor variabilidad y mayor regularidad. El tamaño representa el número de temporadas.
+          </div>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3>Mapa histórico de trayectorias competitivas</h3>
+            <p id="regularity-status" class="small muted">Cargando datos...</p>
+          </div>
+
+          <div id="regularity-scatter-chart" class="chart" aria-live="polite"></div>
+        </div>
       </div>
     </section>
   </main>

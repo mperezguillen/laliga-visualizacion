@@ -3,7 +3,8 @@ import {
   renderBumpChart,
   renderDominanceHeatmap,
   renderSuccessConcentrationChart,
-  renderHistoricalChangesChart
+  renderHistoricalChangesChart,
+  renderRegularityScatterChart
 } from "./charts.js";
 
 const state = {
@@ -17,7 +18,9 @@ const state = {
   successMetric: "uniqueChampions",
   changeType: "recoveries",
   changeMetric: "Performance",
-  changeTopN: 10
+  changeTopN: 10,
+  regularityMinSeasons: 10,
+  regularityLabelCount: 12
 };
 
 init();
@@ -43,6 +46,7 @@ async function init() {
     setupDominanceControls();
     setupSuccessControls();
     setupChangesControls();
+    setupRegularityControls();
     updateStatus();
 
     render();
@@ -276,6 +280,42 @@ function setupChangesControls() {
   }
 }
 
+function setupRegularityControls() {
+  const minSeasonsSelector = document.querySelector("#regularity-min-seasons");
+  const labelCountSelector = document.querySelector("#regularity-label-count");
+
+  if (minSeasonsSelector) {
+    minSeasonsSelector.value = String(state.regularityMinSeasons);
+
+    minSeasonsSelector.addEventListener("change", () => {
+      state.regularityMinSeasons = Number(minSeasonsSelector.value);
+      render();
+    });
+  }
+
+  if (labelCountSelector) {
+    labelCountSelector.value = String(state.regularityLabelCount);
+
+    labelCountSelector.addEventListener("change", () => {
+      state.regularityLabelCount = Number(labelCountSelector.value);
+      render();
+    });
+  }
+}
+
+function updateRegularityStatus(summary) {
+  const status = document.querySelector("#regularity-status");
+
+  if (!status || !summary) {
+    return;
+  }
+
+  status.textContent =
+    `${summary.teams} equipos · ` +
+    `mínimo ${summary.minSeasons} temporada(s) · ` +
+    `${summary.labelCount} etiquetas`;
+}
+
 function updateChangesStatus(summary) {
   const status = document.querySelector("#changes-status");
   const description = document.querySelector("#change-metric-description");
@@ -343,10 +383,17 @@ function render() {
     topN: state.changeTopN
   });
 
+  const regularitySummary = renderRegularityScatterChart(state.data, {
+    container: "#regularity-scatter-chart",
+    minSeasons: state.regularityMinSeasons,
+    labelCount: state.regularityLabelCount
+  });
+
   updateStatus(filteredData);
   updateDominanceStatus(dominanceSummary);
   updateSuccessStatus(successSummary);
   updateChangesStatus(changesSummary);
+  updateRegularityStatus(regularitySummary);
 }
 
 function updateStatus(data = state.data) {

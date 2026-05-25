@@ -327,3 +327,11 @@ label {
 #historical-changes-chart svg {
   max-width: none;
 }
+
+#regularity-scatter-chart {
+  min-height: 520px;
+}
+
+#regularity-scatter-chart svg {
+  max-width: none;
+}

@@ -686,6 +686,128 @@ export function renderHistoricalChangesChart(data, options = {}) {
   };
 }
 
+export function renderRegularityScatterChart(data, options = {}) {
+  const {
+    container,
+    minSeasons = 10,
+    labelCount = 12
+  } = options;
+
+  const element =
+    typeof container === "string"
+      ? document.querySelector(container)
+      : container;
+
+  if (!element) {
+    throw new Error("No se ha encontrado el contenedor del gráfico de regularidad.");
+  }
+
+  element.innerHTML = "";
+
+  const allTeams = buildTeamRegularityRows(data);
+
+  const rows = allTeams
+    .filter((row) => row.Seasons >= minSeasons)
+    .sort((a, b) => {
+      return (
+        a.AvgPosition - b.AvgPosition ||
+        b.Seasons - a.Seasons ||
+        a.PositionStdDev - b.PositionStdDev
+      );
+    });
+
+  if (rows.length === 0) {
+    element.innerHTML = `
+      <p class="muted">
+        No hay equipos suficientes para los filtros seleccionados.
+      </p>
+    `;
+
+    return null;
+  }
+
+  const labels = getRegularityLabels(rows, labelCount);
+
+  const maxAvgPosition = Math.max(...rows.map((d) => d.AvgPosition));
+  const maxStdDev = Math.max(...rows.map((d) => d.PositionStdDev));
+
+  const medianAvgPosition = median(rows.map((d) => d.AvgPosition));
+  const medianStdDev = median(rows.map((d) => d.PositionStdDev));
+
+  const width = Math.max(820, element.clientWidth || 960);
+
+  const chart = Plot.plot({
+    width,
+    height: 560,
+    marginTop: 36,
+    marginRight: 40,
+    marginBottom: 70,
+    marginLeft: 78,
+
+    x: {
+      label: "Posición media histórica",
+      domain: [1, Math.ceil(maxAvgPosition + 1)],
+      grid: true,
+      tickFormat: (value) => `${value}.ª`
+    },
+
+    y: {
+      label: "Variabilidad de la posición",
+      domain: [0, Math.ceil(maxStdDev + 1)],
+      grid: true
+    },
+
+    color: {
+      legend: true
+    },
+
+    marks: [
+      Plot.ruleX([medianAvgPosition], {
+        stroke: "#999999",
+        strokeOpacity: 0.35,
+        strokeDasharray: "4 4"
+      }),
+
+      Plot.ruleY([medianStdDev], {
+        stroke: "#999999",
+        strokeOpacity: 0.35,
+        strokeDasharray: "4 4"
+      }),
+
+      Plot.dot(rows, {
+        x: "AvgPosition",
+        y: "PositionStdDev",
+        r: (d) => Math.max(4, Math.sqrt(d.Seasons) * 1.55),
+        fill: "Category",
+        fillOpacity: 0.78,
+        stroke: "#ffffff",
+        strokeWidth: 1.1,
+        title: "Tooltip"
+      }),
+
+      Plot.text(labels, {
+        x: "AvgPosition",
+        y: "PositionStdDev",
+        text: "Team",
+        dx: 8,
+        dy: -8,
+        fontSize: 11,
+        fontWeight: 700,
+        fill: "#1d1d1f",
+        title: "Tooltip"
+      })
+    ]
+  });
+
+  element.append(chart);
+
+  return {
+    teams: rows.length,
+    minSeasons,
+    labelCount
+  };
+}
+
 function formatBumpTooltip(d, metric, metricConfig) {
   const metricValue = Number.isFinite(d[metric])
     ? metricConfig.format(d[metric])
@@ -1130,4 +1252,213 @@ function formatChangeTooltip({
     `Puntos anteriores: ${previous.Points}`,
     `Puntos posteriores: ${current.Points}`
   ].join("\n");
+}
+
+function buildTeamRegularityRows(data) {
+  const grouped = new Map();
+
+  for (const row of data) {
+    if (
+      !row.Team ||
+      !Number.isFinite(row.Position) ||
+      !Number.isFinite(row.SeasonStart)
+    ) {
+      continue;
+    }
+
+    if (!grouped.has(row.Team)) {
+      grouped.set(row.Team, {
+        Team: row.Team,
+        Positions: [],
+        Performances: [],
+        Points: [],
+        SeasonsList: [],
+        ChampionCount: 0,
+        Top3Count: 0,
+        Top5Count: 0
+      });
+    }
+
+    const group = grouped.get(row.Team);
+
+    group.Positions.push(row.Position);
+    group.SeasonsList.push(row.SeasonStart);
+
+    if (Number.isFinite(row.Performance)) {
+      group.Performances.push(row.Performance);
+    }
+
+    if (Number.isFinite(row.Points)) {
+      group.Points.push(row.Points);
+    }
+
+    if (row.Position === 1) {
+      group.ChampionCount += 1;
+    }
+
+    if (row.Position <= 3) {
+      group.Top3Count += 1;
+    }
+
+    if (row.Position <= 5) {
+      group.Top5Count += 1;
+    }
+  }
+
+  const baseRows = Array.from(grouped.values()).map((group) => {
+    const seasons = group.Positions.length;
+    const avgPosition = mean(group.Positions);
+    const positionStdDev = standardDeviation(group.Positions);
+    const avgPerformance = mean(group.Performances);
+    const avgPoints = mean(group.Points);
+    const firstSeason = Math.min(...group.SeasonsList);
+    const lastSeason = Math.max(...group.SeasonsList);
+
+    return {
+      Team: group.Team,
+      Seasons: seasons,
+      AvgPosition: avgPosition,
+      PositionStdDev: positionStdDev,
+      AvgPerformance: avgPerformance,
+      AvgPoints: avgPoints,
+      FirstSeason: firstSeason,
+      LastSeason: lastSeason,
+      ChampionCount: group.ChampionCount,
+      Top3Count: group.Top3Count,
+      Top5Count: group.Top5Count
+    };
+  });
+
+  const stdValues = baseRows.map((row) => row.PositionStdDev);
+  const medianStd = median(stdValues);
+  const highStd = quantile(stdValues, 0.75);
+
+  return baseRows.map((row) => {
+    const category = classifyTeamRegularity(row, medianStd, highStd);
+
+    return {
+      ...row,
+      Category: category,
+      Tooltip: formatRegularityTooltip(row, category)
+    };
+  });
+}
+
+function classifyTeamRegularity(row, medianStd, highStd) {
+  if (row.Seasons < 5) {
+    return "Episódico";
+  }
+
+  if (row.AvgPosition <= 5 && row.PositionStdDev <= medianStd) {
+    return "Dominante regular";
+  }
+
+  if (row.AvgPosition <= 7) {
+    return "Dominante con altibajos";
+  }
+
+  if (row.AvgPosition <= 10 && row.PositionStdDev <= medianStd) {
+    return "Regular competitivo";
+  }
+
+  if (row.PositionStdDev >= highStd) {
+    return "Irregular";
+  }
+
+  return "Zona media estable";
+}
+
+function getRegularityLabels(rows, labelCount) {
+  if (labelCount <= 0) {
+    return [];
+  }
+
+  return rows
+    .slice()
+    .sort((a, b) => {
+      return (
+        b.ChampionCount - a.ChampionCount ||
+        b.Top3Count - a.Top3Count ||
+        b.Top5Count - a.Top5Count ||
+        b.Seasons - a.Seasons ||
+        a.AvgPosition - b.AvgPosition
+      );
+    })
+    .slice(0, labelCount);
+}
+
+function formatRegularityTooltip(row, category) {
+  const avgPerformance = Number.isFinite(row.AvgPerformance)
+    ? `${(row.AvgPerformance * 100).toFixed(1)}%`
+    : "Sin dato";
+
+  const avgPoints = Number.isFinite(row.AvgPoints)
+    ? row.AvgPoints.toFixed(1)
+    : "Sin dato";
+
+  return [
+    `Equipo: ${row.Team}`,
+    `Categoría: ${category}`,
+    `Temporadas disputadas: ${row.Seasons}`,
+    `Periodo: ${row.FirstSeason} → ${row.LastSeason}`,
+    `Posición media: ${row.AvgPosition.toFixed(2)}.ª`,
+    `Variabilidad de posición: ${row.PositionStdDev.toFixed(2)}`,
+    `Performance media: ${avgPerformance}`,
+    `Puntos medios: ${avgPoints}`,
+    `Títulos: ${row.ChampionCount}`,
+    `Temporadas en top 3: ${row.Top3Count}`,
+    `Temporadas en top 5: ${row.Top5Count}`
+  ].join("\n");
+}
+
+function mean(values) {
+  const validValues = values.filter(Number.isFinite);
+
+  if (validValues.length === 0) {
+    return NaN;
+  }
+
+  return validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+}
+
+function standardDeviation(values) {
+  const validValues = values.filter(Number.isFinite);
+
+  if (validValues.length <= 1) {
+    return 0;
+  }
+
+  const avg = mean(validValues);
+
+  const variance =
+    validValues.reduce((sum, value) => {
+      return sum + Math.pow(value - avg, 2);
+    }, 0) / validValues.length;
+
+  return Math.sqrt(variance);
+}
+
+function median(values) {
+  return quantile(values, 0.5);
+}
+
+function quantile(values, q) {
+  const validValues = values
+    .filter(Number.isFinite)
+    .slice()
+    .sort((a, b) => a - b);
+
+  if (validValues.length === 0) {
+    return NaN;
+  }
+
+  const position = (validValues.length - 1) * q;
+  const base = Math.floor(position);
+  const rest = position - base;
+
+  if (validValues[base + 1] !== undefined) {
+    return validValues[base] + rest * (validValues[base + 1] - validValues[base]);
+  }
+
+  return validValues[base];
 }
