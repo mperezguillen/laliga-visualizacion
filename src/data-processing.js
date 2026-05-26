@@ -303,6 +303,215 @@ export function buildCumulativeBalance(matches, teamA, teamB) {
     });
 }
 
+export function buildNetworkData(matches, options = {}) {
+  const {
+    teamStatsData = [],
+    decade = "all",
+    startYear = null,
+    endYear = null,
+    minMatches = 40,
+    topNTeams = 20,
+    minSeasons = 10,
+    onlyBalanced = false,
+    equilibriumThreshold = 0.55
+  } = options;
+
+  const filteredMatches = matches.filter((match) => {
+    if (!Number.isFinite(match.seasonStartYear)) {
+      return false;
+    }
+
+    if (decade !== "all" && match.decade !== Number(decade)) {
+      return false;
+    }
+
+    if (Number.isFinite(startYear) && match.seasonStartYear < startYear) {
+      return false;
+    }
+
+    if (Number.isFinite(endYear) && match.seasonStartYear > endYear) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const teamStats = buildTeamNetworkStats(teamStatsData, filteredMatches);
+
+  const candidateTeams = Array.from(teamStats.values())
+    .filter((team) => team.seasonsPlayed >= minSeasons)
+    .sort((a, b) => {
+      return (
+        b.seasonsPlayed - a.seasonsPlayed ||
+        b.totalMatchesInMatrix - a.totalMatchesInMatrix ||
+        b.top3Count - a.top3Count ||
+        a.avgPosition - b.avgPosition ||
+        a.team.localeCompare(b.team, "es")
+      );
+    })
+    .slice(0, topNTeams);
+
+  const visibleTeamNames = new Set(candidateTeams.map((team) => team.team));
+
+  const pairStats = new Map();
+
+  for (const match of filteredMatches) {
+    if (!visibleTeamNames.has(match.teamA) || !visibleTeamNames.has(match.teamB)) {
+      continue;
+    }
+
+    const [source, target] = getCanonicalTeamPair(match.teamA, match.teamB);
+    const pairKey = `${source}__${target}`;
+
+    if (!pairStats.has(pairKey)) {
+      pairStats.set(pairKey, {
+        source,
+        target,
+        matches: 0,
+        winsSource: 0,
+        draws: 0,
+        winsTarget: 0,
+        goalsSource: 0,
+        goalsTarget: 0,
+        goalDiffSource: 0,
+        seasons: new Set(),
+        decades: new Set()
+      });
+    }
+
+    const pair = pairStats.get(pairKey);
+
+    const sourceIsMatchTeamA = match.teamA === source;
+
+    const goalsSource = sourceIsMatchTeamA ? match.goalsA : match.goalsB;
+    const goalsTarget = sourceIsMatchTeamA ? match.goalsB : match.goalsA;
+
+    const resultForSource = getResult(goalsSource, goalsTarget);
+
+    pair.matches += 1;
+    pair.goalsSource += goalsSource;
+    pair.goalsTarget += goalsTarget;
+    pair.goalDiffSource += goalsSource - goalsTarget;
+
+    if (Number.isFinite(match.seasonStartYear)) {
+      pair.seasons.add(match.seasonStartYear);
+    }
+
+    if (Number.isFinite(match.decade)) {
+      pair.decades.add(match.decade);
+    }
+
+    if (resultForSource === "win") {
+      pair.winsSource += 1;
+    } else if (resultForSource === "loss") {
+      pair.winsTarget += 1;
+    } else {
+      pair.draws += 1;
+    }
+  }
+
+  let links = Array.from(pairStats.values())
+    .map((pair) => {
+      const balance = Math.abs(pair.winsSource - pair.winsTarget);
+
+      const equilibrium =
+        pair.matches > 0
+          ? 1 - balance / pair.matches
+          : 0;
+
+      const dominance =
+        pair.matches > 0
+          ? (pair.winsSource - pair.winsTarget) / pair.matches
+          : 0;
+
+      const rivalryScore = pair.matches * equilibrium;
+
+      return {
+        source: pair.source,
+        target: pair.target,
+
+        matches: pair.matches,
+        winsSource: pair.winsSource,
+        draws: pair.draws,
+        winsTarget: pair.winsTarget,
+
+        goalsSource: pair.goalsSource,
+        goalsTarget: pair.goalsTarget,
+        goalDiffSource: pair.goalDiffSource,
+
+        balance,
+        dominance,
+        equilibrium,
+        intensity: pair.matches,
+        rivalryScore,
+
+        seasonsCount: pair.seasons.size,
+        decadesCount: pair.decades.size,
+
+        pairId: `${normalizeKey(pair.source)}__${normalizeKey(pair.target)}`
+      };
+    })
+    .filter((link) => link.matches >= minMatches)
+    .filter((link) => {
+      if (!onlyBalanced) {
+        return true;
+      }
+
+      return link.equilibrium >= equilibriumThreshold;
+    })
+    .sort((a, b) => {
+      return (
+        b.rivalryScore - a.rivalryScore ||
+        b.matches - a.matches ||
+        b.equilibrium - a.equilibrium
+      );
+    });
+
+  const connectedTeams = new Set();
+
+  for (const link of links) {
+    connectedTeams.add(link.source);
+    connectedTeams.add(link.target);
+  }
+
+  const nodes = candidateTeams
+    .filter((team) => connectedTeams.has(team.team))
+    .map((team) => ({
+      id: team.team,
+      team: team.team,
+      seasonsPlayed: team.seasonsPlayed,
+      appearances: team.seasonsPlayed,
+      totalMatchesInMatrix: team.totalMatchesInMatrix,
+      avgPosition: team.avgPosition,
+      titles: team.titles,
+      top3Count: team.top3Count,
+      top5Count: team.top5Count,
+      category: team.category
+    }));
+
+  links = links.filter((link) => {
+    return connectedTeams.has(link.source) && connectedTeams.has(link.target);
+  });
+
+  return {
+    nodes,
+    links,
+    summary: {
+      totalMatchesInput: matches.length,
+      filteredMatches: filteredMatches.length,
+      visibleTeamsBeforeLinkFilter: candidateTeams.length,
+      visibleTeamsAfterLinkFilter: nodes.length,
+      visibleLinks: links.length,
+      minMatches,
+      topNTeams,
+      minSeasons,
+      decade,
+      onlyBalanced,
+      equilibriumThreshold
+    }
+  };
+}
+
 export function validateMatrixTransformation(data, matches) {
   const dataBySeason = groupBy(data, (row) => row.Season);
   const matchesBySeason = groupBy(matches, (match) => match.Season);
@@ -335,6 +544,115 @@ export function validateMatrixTransformation(data, matches) {
         status
       };
     });
+}
+
+function buildTeamNetworkStats(teamStatsData, matches) {
+  const stats = new Map();
+
+  for (const row of teamStatsData) {
+    if (!row.Team) {
+      continue;
+    }
+
+    if (!stats.has(row.Team)) {
+      stats.set(row.Team, {
+        team: row.Team,
+        seasons: new Set(),
+        positions: [],
+        titles: 0,
+        top3Count: 0,
+        top5Count: 0,
+        totalMatchesInMatrix: 0
+      });
+    }
+
+    const team = stats.get(row.Team);
+
+    if (Number.isFinite(row.SeasonStart)) {
+      team.seasons.add(row.SeasonStart);
+    }
+
+    if (Number.isFinite(row.Position)) {
+      team.positions.push(row.Position);
+
+      if (row.Position === 1) {
+        team.titles += 1;
+      }
+
+      if (row.Position <= 3) {
+        team.top3Count += 1;
+      }
+
+      if (row.Position <= 5) {
+        team.top5Count += 1;
+      }
+    }
+  }
+
+  for (const match of matches) {
+    ensureNetworkTeam(stats, match.teamA);
+    ensureNetworkTeam(stats, match.teamB);
+
+    stats.get(match.teamA).totalMatchesInMatrix += 1;
+    stats.get(match.teamB).totalMatchesInMatrix += 1;
+  }
+
+  for (const team of stats.values()) {
+    team.seasonsPlayed = team.seasons.size;
+    team.avgPosition = meanNetworkValue(team.positions);
+    team.category = classifyNetworkTeam(team);
+  }
+
+  return stats;
+}
+
+function ensureNetworkTeam(stats, teamName) {
+  if (!teamName || stats.has(teamName)) {
+    return;
+  }
+
+  stats.set(teamName, {
+    team: teamName,
+    seasons: new Set(),
+    positions: [],
+    titles: 0,
+    top3Count: 0,
+    top5Count: 0,
+    totalMatchesInMatrix: 0,
+    seasonsPlayed: 0,
+    avgPosition: NaN,
+    category: "episódico"
+  });
+}
+
+function classifyNetworkTeam(team) {
+  if (team.titles >= 10 || team.top3Count >= 25) {
+    return "dominante";
+  }
+
+  if (team.seasonsPlayed >= 50) {
+    return "histórico";
+  }
+
+  if (team.seasonsPlayed >= 20) {
+    return "regular";
+  }
+
+  return "episódico";
+}
+
+function meanNetworkValue(values) {
+  const validValues = values.filter(Number.isFinite);
+
+  if (validValues.length === 0) {
+    return NaN;
+  }
+
+  return validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+}
+
+function getCanonicalTeamPair(teamA, teamB) {
+  return [teamA, teamB].sort((a, b) => a.localeCompare(b, "es"));
 }
 
 function getMatrixResults(row) {

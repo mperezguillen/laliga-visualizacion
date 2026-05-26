@@ -1,4 +1,5 @@
 import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
 const BUMP_METRIC_CONFIG = {
   Position: {
@@ -1030,6 +1031,358 @@ export function renderCumulativeBalanceChart(data, options = {}) {
   });
 
   element.append(chart);
+}
+
+export function renderNetworkGraph(networkData, options = {}) {
+  const {
+    container,
+    resetButton = null,
+    onLinkClick = null
+  } = options;
+
+  const element =
+    typeof container === "string"
+      ? document.querySelector(container)
+      : container;
+
+  if (!element) {
+    throw new Error("No se ha encontrado el contenedor de la red.");
+  }
+
+  element.innerHTML = "";
+
+  const nodes = (networkData?.nodes ?? []).map((node) => ({ ...node }));
+  const links = (networkData?.links ?? []).map((link) => ({ ...link }));
+
+  if (nodes.length === 0 || links.length === 0) {
+    element.innerHTML = `
+      <p class="muted" style="padding: 24px;">
+        No hay suficientes nodos o enlaces para construir la red con los filtros actuales.
+        Prueba a reducir el mínimo de enfrentamientos o el mínimo de temporadas.
+      </p>
+    `;
+
+    return;
+  }
+
+  const width = Math.max(860, element.clientWidth || 960);
+  const height = 620;
+
+  const maxMatches = d3.max(links, (d) => d.matches) ?? 1;
+  const minMatches = d3.min(links, (d) => d.matches) ?? 1;
+  const maxSeasons = d3.max(nodes, (d) => d.seasonsPlayed) ?? 1;
+
+  const linkWidth = d3
+    .scaleSqrt()
+    .domain([minMatches, maxMatches])
+    .range([1.2, 7]);
+
+  const nodeRadius = d3
+    .scaleSqrt()
+    .domain([1, maxSeasons])
+    .range([5, 18]);
+
+  const categoryColor = d3
+    .scaleOrdinal()
+    .domain(["dominante", "histórico", "regular", "episódico"])
+    .range(["#8b1e2d", "#30343b", "#8a6f3d", "#777777"]);
+
+  const tooltip = d3
+    .select(element)
+    .append("div")
+    .attr("class", "network-tooltip");
+
+  const svg = d3
+    .select(element)
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height])
+    .attr("role", "img")
+    .attr("aria-label", "Red de enfrentamientos históricos de LaLiga");
+
+  const graphLayer = svg.append("g");
+
+  const zoom = d3
+    .zoom()
+    .scaleExtent([0.45, 3])
+    .on("zoom", (event) => {
+      graphLayer.attr("transform", event.transform);
+    });
+
+  svg.call(zoom);
+
+  const linkGroup = graphLayer
+    .append("g")
+    .attr("stroke-linecap", "round");
+
+  const nodeGroup = graphLayer.append("g");
+  const labelGroup = graphLayer.append("g");
+
+  const link = linkGroup
+    .selectAll("line")
+    .data(links)
+    .join("line")
+    .attr("class", "network-link")
+    .attr("stroke", "#8b1e2d")
+    .attr("stroke-opacity", (d) => 0.18 + d.equilibrium * 0.42)
+    .attr("stroke-width", (d) => linkWidth(d.matches))
+    .on("mouseenter", (event, d) => {
+      highlightLink(d, link, node, labels);
+      showLinkTooltip(event, d, tooltip);
+    })
+    .on("mousemove", (event) => {
+      moveTooltip(event, tooltip);
+    })
+    .on("mouseleave", () => {
+      resetHighlight(link, node, labels);
+      hideTooltip(tooltip);
+    })
+    .on("click", (event, d) => {
+      event.stopPropagation();
+
+      if (typeof onLinkClick === "function") {
+        onLinkClick({
+          ...d,
+          source: getNetworkNodeId(d.source),
+          target: getNetworkNodeId(d.target)
+        });
+      }
+    });
+
+  const node = nodeGroup
+    .selectAll("circle")
+    .data(nodes)
+    .join("circle")
+    .attr("class", "network-node")
+    .attr("r", (d) => nodeRadius(d.seasonsPlayed))
+    .attr("fill", (d) => categoryColor(d.category))
+    .attr("fill-opacity", 0.88)
+    .attr("stroke", "#ffffff")
+    .attr("stroke-width", 1.3)
+    .on("mouseenter", (event, d) => {
+      highlightNode(d, links, link, node, labels);
+      showNodeTooltip(event, d, tooltip);
+    })
+    .on("mousemove", (event) => {
+      moveTooltip(event, tooltip);
+    })
+    .on("mouseleave", () => {
+      resetHighlight(link, node, labels);
+      hideTooltip(tooltip);
+    })
+    .call(
+      d3
+        .drag()
+        .on("start", dragStarted)
+        .on("drag", dragged)
+        .on("end", dragEnded)
+    );
+
+  const labels = labelGroup
+    .selectAll("text")
+    .data(nodes)
+    .join("text")
+    .attr("class", "network-label")
+    .attr("font-size", 11)
+    .attr("font-weight", 700)
+    .attr("fill", "#1d1d1f")
+    .attr("text-anchor", "middle")
+    .text((d) => d.team);
+
+  const simulation = d3
+    .forceSimulation(nodes)
+    .force(
+      "link",
+      d3
+        .forceLink(links)
+        .id((d) => d.id)
+        .distance((d) => Math.max(70, 165 - linkWidth(d.matches) * 8))
+        .strength(0.22)
+    )
+    .force("charge", d3.forceManyBody().strength(-460))
+    .force("center", d3.forceCenter(width / 2, height / 2))
+    .force(
+      "collision",
+      d3.forceCollide().radius((d) => nodeRadius(d.seasonsPlayed) + 22)
+    )
+    .on("tick", ticked);
+
+  const resetElement =
+    typeof resetButton === "string"
+      ? document.querySelector(resetButton)
+      : resetButton;
+
+  if (resetElement) {
+    resetElement.onclick = () => {
+      svg
+        .transition()
+        .duration(550)
+        .call(zoom.transform, d3.zoomIdentity);
+    };
+  }
+
+  function ticked() {
+    link
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
+
+    node
+      .attr("cx", (d) => d.x)
+      .attr("cy", (d) => d.y);
+
+    labels
+      .attr("x", (d) => d.x)
+      .attr("y", (d) => d.y + nodeRadius(d.seasonsPlayed) + 14);
+  }
+
+  function dragStarted(event, d) {
+    if (!event.active) {
+      simulation.alphaTarget(0.25).restart();
+    }
+
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+
+  function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+
+  function dragEnded(event, d) {
+    if (!event.active) {
+      simulation.alphaTarget(0);
+    }
+
+    d.fx = null;
+    d.fy = null;
+  }
+}
+
+function highlightNode(selectedNode, links, linkSelection, nodeSelection, labelSelection) {
+  const connectedIds = new Set([selectedNode.id]);
+
+  for (const link of links) {
+    const sourceId = getNetworkNodeId(link.source);
+    const targetId = getNetworkNodeId(link.target);
+
+    if (sourceId === selectedNode.id || targetId === selectedNode.id) {
+      connectedIds.add(sourceId);
+      connectedIds.add(targetId);
+    }
+  }
+
+  linkSelection
+    .attr("stroke-opacity", (d) => {
+      const sourceId = getNetworkNodeId(d.source);
+      const targetId = getNetworkNodeId(d.target);
+
+      return sourceId === selectedNode.id || targetId === selectedNode.id
+        ? 0.8
+        : 0.04;
+    });
+
+  nodeSelection
+    .attr("fill-opacity", (d) => connectedIds.has(d.id) ? 0.95 : 0.18);
+
+  labelSelection
+    .attr("opacity", (d) => connectedIds.has(d.id) ? 1 : 0.16);
+}
+
+function highlightLink(selectedLink, linkSelection, nodeSelection, labelSelection) {
+  const sourceId = getNetworkNodeId(selectedLink.source);
+  const targetId = getNetworkNodeId(selectedLink.target);
+
+  linkSelection
+    .attr("stroke-opacity", (d) => {
+      const currentSourceId = getNetworkNodeId(d.source);
+      const currentTargetId = getNetworkNodeId(d.target);
+
+      return currentSourceId === sourceId && currentTargetId === targetId
+        ? 0.9
+        : 0.05;
+    });
+
+  nodeSelection
+    .attr("fill-opacity", (d) =>
+      d.id === sourceId || d.id === targetId ? 0.95 : 0.18
+    );
+
+  labelSelection
+    .attr("opacity", (d) =>
+      d.id === sourceId || d.id === targetId ? 1 : 0.16
+    );
+}
+
+function resetHighlight(linkSelection, nodeSelection, labelSelection) {
+  linkSelection
+    .attr("stroke-opacity", (d) => 0.18 + d.equilibrium * 0.42);
+
+  nodeSelection.attr("fill-opacity", 0.88);
+  labelSelection.attr("opacity", 1);
+}
+
+function showNodeTooltip(event, node, tooltip) {
+  const avgPosition = Number.isFinite(node.avgPosition)
+    ? `${node.avgPosition.toFixed(2)}.ª`
+    : "Sin dato";
+
+  tooltip
+    .html(`
+      <strong>${node.team}</strong>
+      Temporadas: ${node.seasonsPlayed}<br>
+      Partidos en matriz: ${node.totalMatchesInMatrix}<br>
+      Posición media: ${avgPosition}<br>
+      Títulos: ${node.titles}<br>
+      Top 3: ${node.top3Count}<br>
+      Categoría: ${node.category}
+    `)
+    .style("opacity", 1);
+
+  moveTooltip(event, tooltip);
+}
+
+function showLinkTooltip(event, link, tooltip) {
+  const source = getNetworkNodeId(link.source);
+  const target = getNetworkNodeId(link.target);
+
+  tooltip
+    .html(`
+      <strong>${source} vs ${target}</strong>
+      Partidos: ${link.matches}<br>
+      Victorias ${source}: ${link.winsSource}<br>
+      Empates: ${link.draws}<br>
+      Victorias ${target}: ${link.winsTarget}<br>
+      Goles: ${link.goalsSource} - ${link.goalsTarget}<br>
+      Equilibrio: ${formatNetworkPercent(link.equilibrium)}<br>
+      Rivalry score: ${link.rivalryScore.toFixed(1)}
+    `)
+    .style("opacity", 1);
+
+  moveTooltip(event, tooltip);
+}
+
+function moveTooltip(event, tooltip) {
+  tooltip
+    .style("left", `${event.offsetX}px`)
+    .style("top", `${event.offsetY}px`);
+}
+
+function hideTooltip(tooltip) {
+  tooltip.style("opacity", 0);
+}
+
+function getNetworkNodeId(value) {
+  return typeof value === "object" ? value.id : value;
+}
+
+function formatNetworkPercent(value) {
+  if (!Number.isFinite(value)) {
+    return "Sin dato";
+  }
+
+  return `${Math.round(value * 100)}%`;
 }
 
 function prepareCumulativeBalanceRows(data, teamA, teamB) {

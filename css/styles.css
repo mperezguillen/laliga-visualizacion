@@ -405,3 +405,95 @@ label {
 #rivalry-balance-chart {
   overflow-x: auto;
 }
+
+.network-chart {
+  position: relative;
+  width: 100%;
+  min-height: 620px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at top left, rgba(139, 30, 45, 0.08), transparent 32%),
+    #fdfcf8;
+}
+
+.network-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 620px;
+  font-family: inherit;
+  cursor: grab;
+}
+
+.network-chart svg:active {
+  cursor: grabbing;
+}
+
+.network-link {
+  cursor: pointer;
+}
+
+.network-node {
+  cursor: grab;
+}
+
+.network-node:active {
+  cursor: grabbing;
+}
+
+.network-label {
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #fdfcf8;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.network-tooltip {
+  position: absolute;
+  z-index: 20;
+  max-width: 280px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - 12px));
+  transition: opacity 0.15s ease;
+}
+
+.network-tooltip strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-accent);
+}
+
+.checkbox-control label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-weight: 600;
+}
+
+.checkbox-control input {
+  margin-top: 5px;
+}
+
+@media (max-width: 860px) {
+  .network-chart {
+    min-height: 520px;
+    overflow-x: auto;
+  }
+
+  .network-chart svg {
+    min-width: 760px;
+    min-height: 520px;
+  }
+}

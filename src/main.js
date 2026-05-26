@@ -4,7 +4,8 @@ import {
   validateMatrixTransformation,
   aggregateHeadToHead,
   aggregateRivalryByDecade,
-  buildCumulativeBalance
+  buildCumulativeBalance,
+  buildNetworkData
 } from "./data-processing.js";
 import {
   renderBumpChart,
@@ -13,7 +14,8 @@ import {
   renderHistoricalChangesChart,
   renderRegularityScatterChart,
   renderRivalryDecadeChart,
-  renderCumulativeBalanceChart
+  renderCumulativeBalanceChart,
+  renderNetworkGraph
 } from "./charts.js";
 
 const state = {
@@ -32,7 +34,13 @@ const state = {
   regularityMinSeasons: 10,
   regularityLabelCount: 12,
   rivalryTeamA: null,
-  rivalryTeamB: null
+  rivalryTeamB: null,
+  networkData: null,
+  networkMinMatches: 80,
+  networkTopN: 20,
+  networkMinSeasons: 10,
+  networkOnlyBalanced: false,
+  networkDecade: "all"
 };
 
 init();
@@ -41,9 +49,18 @@ async function init() {
   try {
     const data = await loadLaligaData("./data/laliga.csv");
     const matches = transformMatrixToMatches(data);
+    const networkData = buildNetworkData(matches, {
+      teamStatsData: data,
+      minMatches: state.networkMinMatches,
+      topNTeams: state.networkTopN,
+      minSeasons: state.networkMinSeasons,
+      onlyBalanced: state.networkOnlyBalanced,
+      decade: state.networkDecade
+    });
 
     state.data = data;
     state.matches = matches;
+    state.networkData = networkData;
     state.selectedTeams = getDefaultTeams(data);
 
     const years = getAvailableYears(data);
@@ -59,6 +76,15 @@ async function init() {
     const matrixValidation = validateMatrixTransformation(data, matches);
     console.log("Validación de matriz por temporada:");
     console.table(matrixValidation);
+
+    console.log("Datos de red histórica:");
+    console.log(networkData.summary);
+
+    console.log("Nodos de la red:");
+    console.table(networkData.nodes);
+
+    console.log("Enlaces de la red:");
+    console.table(networkData.links);
 
     const realMadrid = findTeamByAlias(data, "Real Madrid");
     const barcelona = findTeamByAlias(data, "Barcelona");
@@ -106,6 +132,7 @@ async function init() {
     setupChangesControls();
     setupRegularityControls();
     setupRivalryControls(data);
+    setupNetworkControls(data);
     updateStatus();
 
     render();
@@ -454,6 +481,7 @@ function render() {
   updateChangesStatus(changesSummary);
   updateRegularityStatus(regularitySummary);
   renderRivalrySection();
+  renderNetworkSection();
 }
 
 function updateStatus(data = state.data) {
@@ -831,4 +859,130 @@ function formatSignedNumber(value) {
   }
 
   return String(value);
+}
+
+function setupNetworkControls(data) {
+  const decadeSelector = document.querySelector("#network-decade-select");
+  const minMatchesSelector = document.querySelector("#network-min-matches");
+  const topNSelector = document.querySelector("#network-top-n");
+  const minSeasonsSelector = document.querySelector("#network-min-seasons");
+  const onlyBalancedCheckbox = document.querySelector("#network-only-balanced");
+
+  if (
+    !decadeSelector ||
+    !minMatchesSelector ||
+    !topNSelector ||
+    !minSeasonsSelector ||
+    !onlyBalancedCheckbox
+  ) {
+    return;
+  }
+
+  const decades = Array.from(new Set(data.map((d) => d.Decade)))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+
+  decadeSelector.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "Todas las décadas";
+  decadeSelector.append(allOption);
+
+  for (const decade of decades) {
+    const option = document.createElement("option");
+    option.value = String(decade);
+    option.textContent = `${decade}s`;
+    decadeSelector.append(option);
+  }
+
+  decadeSelector.value = state.networkDecade;
+  minMatchesSelector.value = String(state.networkMinMatches);
+  topNSelector.value = String(state.networkTopN);
+  minSeasonsSelector.value = String(state.networkMinSeasons);
+  onlyBalancedCheckbox.checked = state.networkOnlyBalanced;
+
+  decadeSelector.addEventListener("change", () => {
+    state.networkDecade = decadeSelector.value;
+    updateNetworkData();
+    render();
+  });
+
+  minMatchesSelector.addEventListener("change", () => {
+    state.networkMinMatches = Number(minMatchesSelector.value);
+    updateNetworkData();
+    render();
+  });
+
+  topNSelector.addEventListener("change", () => {
+    state.networkTopN = Number(topNSelector.value);
+    updateNetworkData();
+    render();
+  });
+
+  minSeasonsSelector.addEventListener("change", () => {
+    state.networkMinSeasons = Number(minSeasonsSelector.value);
+    updateNetworkData();
+    render();
+  });
+
+  onlyBalancedCheckbox.addEventListener("change", () => {
+    state.networkOnlyBalanced = onlyBalancedCheckbox.checked;
+    updateNetworkData();
+    render();
+  });
+}
+
+function updateNetworkData() {
+  state.networkData = buildNetworkData(state.matches, {
+    teamStatsData: state.data,
+    minMatches: state.networkMinMatches,
+    topNTeams: state.networkTopN,
+    minSeasons: state.networkMinSeasons,
+    onlyBalanced: state.networkOnlyBalanced,
+    decade: state.networkDecade
+  });
+
+  console.log("Red actualizada:");
+  console.log(state.networkData.summary);
+  console.table(state.networkData.nodes);
+  console.table(state.networkData.links);
+}
+
+function renderNetworkSection() {
+  const status = document.querySelector("#network-status");
+
+  if (!state.networkData) {
+    return;
+  }
+
+  const summary = state.networkData.summary;
+
+  if (status) {
+    status.textContent =
+      `${summary.visibleTeamsAfterLinkFilter} equipos · ` +
+      `${summary.visibleLinks} enlaces · ` +
+      `mín. ${summary.minMatches} enfrentamientos`;
+  }
+
+  renderNetworkGraph(state.networkData, {
+    container: "#network-graph",
+    resetButton: "#network-reset-view",
+    onLinkClick: (link) => {
+      state.rivalryTeamA = link.source;
+      state.rivalryTeamB = link.target;
+
+      syncRivalrySelectors();
+      render();
+
+      const rivalrySection = document.querySelector("#rivalidades-resistencias");
+
+      if (rivalrySection) {
+        rivalrySection.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }
+    }
+  });
 }

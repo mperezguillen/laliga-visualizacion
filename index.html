@@ -463,6 +463,112 @@
         </div>
       </div>
     </section>
+
+    <section class="section section--chart" id="red-enfrentamientos">
+      <div class="section__header">
+        <p class="section__kicker">08 · Red histórica</p>
+        <h2>Red de enfrentamientos históricos</h2>
+
+        <p>
+          Esta red representa LaLiga como un sistema de relaciones competitivas.
+          Cada nodo es un equipo y cada enlace resume sus enfrentamientos históricos.
+          El objetivo no es mostrar todos los partidos, sino detectar qué rivalidades
+          han sido más frecuentes, intensas o equilibradas.
+        </p>
+
+        <p class="small muted">
+          Esta visualización es exploratoria: los filtros ayudan a reducir la complejidad
+          y hacer visibles las relaciones más relevantes.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Filtros de red</h3>
+
+          <div class="control-group">
+            <label for="network-decade-select">Década</label>
+            <select
+              id="network-decade-select"
+              class="compact-select"
+              aria-label="Filtro de década de la red"
+            ></select>
+          </div>
+
+          <div class="control-group">
+            <label for="network-min-matches">Mínimo de enfrentamientos</label>
+            <select
+              id="network-min-matches"
+              class="compact-select"
+              aria-label="Mínimo de enfrentamientos por enlace"
+            >
+              <option value="30">30 partidos</option>
+              <option value="40">40 partidos</option>
+              <option value="60">60 partidos</option>
+              <option value="80" selected>80 partidos</option>
+              <option value="100">100 partidos</option>
+              <option value="120">120 partidos</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="network-top-n">Equipos visibles</label>
+            <select
+              id="network-top-n"
+              class="compact-select"
+              aria-label="Número de equipos visibles en la red"
+            >
+              <option value="12">Top 12</option>
+              <option value="15">Top 15</option>
+              <option value="20" selected>Top 20</option>
+              <option value="25">Top 25</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="network-min-seasons">Temporadas mínimas</label>
+            <select
+              id="network-min-seasons"
+              class="compact-select"
+              aria-label="Temporadas mínimas para aparecer en la red"
+            >
+              <option value="5">Mínimo 5 temporadas</option>
+              <option value="10" selected>Mínimo 10 temporadas</option>
+              <option value="20">Mínimo 20 temporadas</option>
+              <option value="40">Mínimo 40 temporadas</option>
+            </select>
+          </div>
+
+          <div class="control-group checkbox-control">
+            <label>
+              <input type="checkbox" id="network-only-balanced" />
+              Mostrar solo rivalidades equilibradas
+            </label>
+          </div>
+
+          <div class="control-group">
+            <button id="network-reset-view" class="secondary-button">
+              Centrar red
+            </button>
+          </div>
+
+          <p class="small muted">
+            El tamaño del nodo representa temporadas disputadas. El grosor del enlace
+            representa número de enfrentamientos. Haz clic en un enlace para enviar esa
+            rivalidad a la sección anterior.
+          </p>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3>Mapa de rivalidades históricas</h3>
+            <p id="network-status" class="small muted">Cargando red...</p>
+          </div>
+
+          <div id="network-graph" class="network-chart" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
