@@ -17,7 +17,8 @@ export async function loadLaligaData(csvPath) {
 function normalizeRow(row) {
   const season = getFirstAvailableValue(row, ["Season", "Temporada"]);
 
-  const team = getFirstAvailableValue(row, [
+  const originalTeam = getFirstAvailableValue(row, [
+    "team_name_original",
     "Home \\ Away",
     "Home / Away",
     "Home Away",
@@ -25,6 +26,21 @@ function normalizeRow(row) {
     "Club",
     "Equipo"
   ]);
+
+  const team = getFirstAvailableValue(row, [
+    "team_name_clean",
+    "Team Clean",
+    "TeamClean",
+    "Equipo limpio"
+  ]) || originalTeam;
+
+  const aliasApplied = parseBoolean(
+    getFirstAvailableValue(row, [
+      "team_name_alias_applied",
+      "Alias Applied",
+      "AliasApplied"
+    ])
+  );
 
   const sNo = toNumber(getFirstAvailableValue(row, [
     "S. No.",
@@ -70,6 +86,8 @@ function normalizeRow(row) {
 
     SNo: sNo,
     Team: team,
+    TeamOriginal: originalTeam,
+    TeamAliasApplied: aliasApplied,
 
     Position: position,
     Played: played,
@@ -827,6 +845,16 @@ function getFirstAvailableValue(row, possibleNames) {
   }
 
   return "";
+}
+
+function parseBoolean(value) {
+  if (value === undefined || value === null || value === "") {
+    return false;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  return ["true", "1", "yes", "y", "sí", "si"].includes(normalized);
 }
 
 function toNumber(value) {

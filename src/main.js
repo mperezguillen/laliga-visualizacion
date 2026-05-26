@@ -14,6 +14,8 @@ import {
   renderNetworkGraph
 } from "./charts.js";
 
+const DATA_PATH = "./data/laliga_cleaned.csv";
+
 const state = {
   data: [],
   matches: [],
@@ -40,7 +42,7 @@ init();
 
 async function init() {
   try {
-    const data = await loadLaligaData("./data/laliga.csv");
+    const data = await loadLaligaData(DATA_PATH);
     const matches = transformMatrixToMatches(data);
     const networkData = buildNetworkData(matches, {
       teamStatsData: data,
@@ -60,7 +62,7 @@ async function init() {
     state.startYear = years[0];
     state.endYear = years[years.length - 1];
 
-    console.log("Datos de LaLiga cargados:", data);
+    console.log(`Datos de LaLiga cargados desde ${DATA_PATH}:`, data);
     console.table(data.slice(0, 10));
 
     console.log("Partidos transformados desde matriz:", matches);
@@ -80,7 +82,7 @@ async function init() {
     console.table(networkData.links);
 
     const realMadrid = findTeamByAlias(data, "Real Madrid");
-    const barcelona = findTeamByAlias(data, "Barcelona");
+    const barcelona = findTeamByAlias(data, "FC Barcelona");
 
     if (realMadrid && barcelona) {
       const madridBarca = aggregateHeadToHead(
@@ -108,7 +110,7 @@ async function init() {
       console.log(`Ejemplo concreto ${realMadrid} vs ${barcelona} en 1928-29:`);
       console.table(examples);
     } else {
-      console.warn("No se han encontrado Real Madrid y/o Barcelona en el dataset.");
+      console.warn("No se han encontrado Real Madrid y/o FC Barcelona en el dataset.");
     }
 
     setupTeamSelector(data);
@@ -137,8 +139,10 @@ async function init() {
     if (chart) {
       chart.innerHTML = `
         <p class="muted">
-          No se ha podido cargar el archivo <code>data/laliga.csv</code>.
-          Revisa que el fichero existe y que estás ejecutando la web desde un servidor local.
+          No se ha podido cargar el archivo <code>data/laliga_cleaned.csv</code>.
+          Revisa que has ejecutado <code>scripts/apply_team_name_aliases.py</code>,
+          que el fichero existe en <code>data/</code> y que estás ejecutando la web
+          desde un servidor local.
         </p>
       `;
     }
@@ -424,11 +428,11 @@ function syncTeamSelector() {
 function getDefaultTeams(data) {
   const preferredNames = [
     "Real Madrid",
-    "Barcelona",
+    "FC Barcelona",
     "Atlético Madrid",
-    "Athletic Club",
-    "Valencia",
-    "Sevilla"
+    "Athletic Bilbao",
+    "Valencia CF",
+    "Sevilla FC"
   ];
 
   return preferredNames
@@ -442,14 +446,27 @@ function findTeamByAlias(data, alias) {
   const teams = getTeams(data);
   const normalizedAlias = normalizeText(alias);
 
-  let match = teams.find((team) => normalizeText(team) === normalizedAlias);
+  const aliasMap = {
+    "barcelona": "fc barcelona",
+    "athletic club": "athletic bilbao",
+    "athletic": "athletic bilbao",
+    "atleti": "atletico madrid",
+    "atletico": "atletico madrid",
+    "valencia": "valencia cf",
+    "sevilla": "sevilla fc",
+    "betis": "real betis"
+  };
+
+  const canonicalAlias = aliasMap[normalizedAlias] ?? normalizedAlias;
+
+  let match = teams.find((team) => normalizeText(team) === canonicalAlias);
 
   if (match) {
     return match;
   }
 
   match = teams.find((team) =>
-    normalizeText(team).includes(normalizedAlias)
+    normalizeText(team).includes(canonicalAlias)
   );
 
   if (match) {
@@ -457,7 +474,7 @@ function findTeamByAlias(data, alias) {
   }
 
   match = teams.find((team) =>
-    normalizedAlias.includes(normalizeText(team))
+    canonicalAlias.includes(normalizeText(team))
   );
 
   return match ?? null;
@@ -527,7 +544,7 @@ function setupRivalryControls(data) {
     null;
 
   const defaultTeamB =
-    findTeamByAlias(data, "Barcelona") ??
+    findTeamByAlias(data, "FC Barcelona") ??
     teams.find((team) => team !== defaultTeamA) ??
     null;
 
