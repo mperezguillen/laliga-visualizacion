@@ -42,4 +42,4 @@ El dataset no incluye las temporadas 1936-37, 1937-38 y 1938-39, correspondiente
 Archivo utilizado por la aplicación:
 
 ```text
-data/laliga.csv
+data/laliga_cleaned.csv
