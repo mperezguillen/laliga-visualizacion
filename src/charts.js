@@ -808,6 +808,293 @@ export function renderRegularityScatterChart(data, options = {}) {
   };
 }
 
+export function renderRivalryDecadeChart(data, options = {}) {
+  const {
+    container,
+    teamA,
+    teamB
+  } = options;
+
+  const element =
+    typeof container === "string"
+      ? document.querySelector(container)
+      : container;
+
+  if (!element) {
+    throw new Error("No se ha encontrado el contenedor del gráfico de rivalidad por décadas.");
+  }
+
+  element.innerHTML = "";
+
+  if (!data || data.length === 0) {
+    element.innerHTML = `
+      <p class="muted">
+        No hay enfrentamientos suficientes para construir el gráfico por décadas.
+      </p>
+    `;
+
+    return;
+  }
+
+  const outcomeOrder = [
+    `Victorias ${teamA}`,
+    "Empates",
+    `Victorias ${teamB}`
+  ];
+
+  const rows = data.flatMap((row) => [
+    {
+      Decade: row.decade,
+      DecadeLabel: row.decadeLabel,
+      Outcome: `Victorias ${teamA}`,
+      Count: row.winsTeamA,
+      Tooltip: [
+        `Década: ${row.decadeLabel}`,
+        `Resultado: victorias de ${teamA}`,
+        `Partidos: ${row.winsTeamA}`,
+        `Total de enfrentamientos: ${row.matches}`
+      ].join("\n")
+    },
+    {
+      Decade: row.decade,
+      DecadeLabel: row.decadeLabel,
+      Outcome: "Empates",
+      Count: row.draws,
+      Tooltip: [
+        `Década: ${row.decadeLabel}`,
+        "Resultado: empates",
+        `Partidos: ${row.draws}`,
+        `Total de enfrentamientos: ${row.matches}`
+      ].join("\n")
+    },
+    {
+      Decade: row.decade,
+      DecadeLabel: row.decadeLabel,
+      Outcome: `Victorias ${teamB}`,
+      Count: row.winsTeamB,
+      Tooltip: [
+        `Década: ${row.decadeLabel}`,
+        `Resultado: victorias de ${teamB}`,
+        `Partidos: ${row.winsTeamB}`,
+        `Total de enfrentamientos: ${row.matches}`
+      ].join("\n")
+    }
+  ]);
+
+  const decades = data.map((row) => row.decadeLabel);
+  const width = Math.max(760, element.clientWidth || 900);
+  const maxMatches = Math.max(...data.map((row) => row.matches));
+
+  const chart = Plot.plot({
+    width,
+    height: 420,
+    marginTop: 34,
+    marginRight: 24,
+    marginBottom: 62,
+    marginLeft: 62,
+
+    x: {
+      label: "Década",
+      domain: decades
+    },
+
+    y: {
+      label: "Número de enfrentamientos",
+      domain: [0, Math.max(1, maxMatches + 2)],
+      grid: true
+    },
+
+    color: {
+      domain: outcomeOrder,
+      range: ["#8b1e2d", "#c8b99a", "#30343b"],
+      legend: true
+    },
+
+    marks: [
+      Plot.ruleY([0]),
+
+      Plot.barY(rows, {
+        x: "DecadeLabel",
+        y: "Count",
+        fill: "Outcome",
+        title: "Tooltip"
+      }),
+
+      Plot.text(data, {
+        x: "decadeLabel",
+        y: "matches",
+        text: (d) => String(d.matches),
+        dy: -8,
+        fill: "#1d1d1f",
+        fontSize: 11,
+        fontWeight: 700
+      })
+    ]
+  });
+
+  element.append(chart);
+}
+
+export function renderCumulativeBalanceChart(data, options = {}) {
+  const {
+    container,
+    teamA,
+    teamB
+  } = options;
+
+  const element =
+    typeof container === "string"
+      ? document.querySelector(container)
+      : container;
+
+  if (!element) {
+    throw new Error("No se ha encontrado el contenedor del gráfico de balance acumulado.");
+  }
+
+  element.innerHTML = "";
+
+  if (!data || data.length === 0) {
+    element.innerHTML = `
+      <p class="muted">
+        No hay enfrentamientos suficientes para construir el balance acumulado.
+      </p>
+    `;
+
+    return;
+  }
+
+  const rows = prepareCumulativeBalanceRows(data, teamA, teamB);
+
+  const minYear = Math.min(...rows.map((row) => row.seasonStartYear));
+  const maxYear = Math.max(...rows.map((row) => row.seasonStartYear));
+  const maxAbsBalance = Math.max(
+    1,
+    ...rows.map((row) => Math.abs(row.cumulativeBalance))
+  );
+
+  const width = Math.max(760, element.clientWidth || 900);
+
+  const chart = Plot.plot({
+    width,
+    height: 420,
+    marginTop: 34,
+    marginRight: 32,
+    marginBottom: 62,
+    marginLeft: 68,
+
+    x: {
+      label: "Temporada",
+      domain: [minYear - 1, maxYear + 1],
+      ticks: 10,
+      tickFormat: (value) => String(Math.round(value))
+    },
+
+    y: {
+      label: `Balance acumulado (+ ${teamA} / − ${teamB})`,
+      domain: [-maxAbsBalance - 1, maxAbsBalance + 1],
+      grid: true
+    },
+
+    marks: [
+      Plot.ruleY([0], {
+        stroke: "#1d1d1f",
+        strokeOpacity: 0.45,
+        strokeDasharray: "4 4"
+      }),
+
+      Plot.areaY(rows, {
+        x: "PlotX",
+        y1: 0,
+        y2: "cumulativeBalance",
+        fill: "#8b1e2d",
+        fillOpacity: 0.08
+      }),
+
+      Plot.lineY(rows, {
+        x: "PlotX",
+        y: "cumulativeBalance",
+        stroke: "#8b1e2d",
+        strokeWidth: 2.6
+      }),
+
+      Plot.dot(rows, {
+        x: "PlotX",
+        y: "cumulativeBalance",
+        r: 3,
+        fill: "#8b1e2d",
+        stroke: "#ffffff",
+        strokeWidth: 1,
+        title: "Tooltip"
+      })
+    ]
+  });
+
+  element.append(chart);
+}
+
+function prepareCumulativeBalanceRows(data, teamA, teamB) {
+  const sortedRows = data
+    .slice()
+    .sort((a, b) => {
+      if (a.seasonStartYear !== b.seasonStartYear) {
+        return a.seasonStartYear - b.seasonStartYear;
+      }
+
+      return a.matchId.localeCompare(b.matchId, "es");
+    });
+
+  const rowsBySeason = new Map();
+
+  for (const row of sortedRows) {
+    if (!rowsBySeason.has(row.seasonStartYear)) {
+      rowsBySeason.set(row.seasonStartYear, []);
+    }
+
+    rowsBySeason.get(row.seasonStartYear).push(row);
+  }
+
+  return sortedRows.map((row, index) => {
+    const seasonRows = rowsBySeason.get(row.seasonStartYear) ?? [];
+    const indexWithinSeason = seasonRows.indexOf(row);
+
+    const offset =
+      seasonRows.length > 1
+        ? ((indexWithinSeason / (seasonRows.length - 1)) - 0.5) * 0.65
+        : 0;
+
+    const resultLabel =
+      row.resultForTeamA === "win"
+        ? `Victoria de ${teamA}`
+        : row.resultForTeamA === "loss"
+          ? `Victoria de ${teamB}`
+          : "Empate";
+
+    return {
+      ...row,
+      MatchNumber: index + 1,
+      PlotX: row.seasonStartYear + offset,
+      Tooltip: [
+        `Temporada: ${row.Season}`,
+        `${teamA} ${row.goalsTeamA} - ${row.goalsTeamB} ${teamB}`,
+        `Resultado: ${resultLabel}`,
+        `Balance acumulado: ${formatSignedChartNumber(row.cumulativeBalance)}`
+      ].join("\n")
+    };
+  });
+}
+
+function formatSignedChartNumber(value) {
+  if (!Number.isFinite(value)) {
+    return "Sin dato";
+  }
+
+  if (value > 0) {
+    return `+${value}`;
+  }
+
+  return String(value);
+}
+
 function formatBumpTooltip(d, metric, metricConfig) {
   const metricValue = Number.isFinite(d[metric])
     ? metricConfig.format(d[metric])

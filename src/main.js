@@ -1,14 +1,24 @@
-import { loadLaligaData } from "./data-processing.js";
+import {
+  loadLaligaData,
+  transformMatrixToMatches,
+  validateMatrixTransformation,
+  aggregateHeadToHead,
+  aggregateRivalryByDecade,
+  buildCumulativeBalance
+} from "./data-processing.js";
 import {
   renderBumpChart,
   renderDominanceHeatmap,
   renderSuccessConcentrationChart,
   renderHistoricalChangesChart,
-  renderRegularityScatterChart
+  renderRegularityScatterChart,
+  renderRivalryDecadeChart,
+  renderCumulativeBalanceChart
 } from "./charts.js";
 
 const state = {
   data: [],
+  matches: [],
   selectedTeams: [],
   selectedMetric: "Position",
   startYear: null,
@@ -20,7 +30,9 @@ const state = {
   changeMetric: "Performance",
   changeTopN: 10,
   regularityMinSeasons: 10,
-  regularityLabelCount: 12
+  regularityLabelCount: 12,
+  rivalryTeamA: null,
+  rivalryTeamB: null
 };
 
 init();
@@ -28,8 +40,10 @@ init();
 async function init() {
   try {
     const data = await loadLaligaData("./data/laliga.csv");
+    const matches = transformMatrixToMatches(data);
 
     state.data = data;
+    state.matches = matches;
     state.selectedTeams = getDefaultTeams(data);
 
     const years = getAvailableYears(data);
@@ -39,6 +53,50 @@ async function init() {
     console.log("Datos de LaLiga cargados:", data);
     console.table(data.slice(0, 10));
 
+    console.log("Partidos transformados desde matriz:", matches);
+    console.table(matches.slice(0, 20));
+
+    const matrixValidation = validateMatrixTransformation(data, matches);
+    console.log("Validación de matriz por temporada:");
+    console.table(matrixValidation);
+
+    const realMadrid = findTeamByAlias(data, "Real Madrid");
+    const barcelona = findTeamByAlias(data, "Barcelona");
+
+    if (realMadrid && barcelona) {
+      const madridBarca = aggregateHeadToHead(
+        matches,
+        realMadrid,
+        barcelona
+      );
+
+      console.log(`Resumen ${realMadrid} vs ${barcelona}:`);
+      console.log(madridBarca);
+
+      console.log("Por décadas:");
+      console.table(
+        aggregateRivalryByDecade(matches, realMadrid, barcelona)
+      );
+
+      console.log("Balance acumulado:");
+      console.table(
+        buildCumulativeBalance(matches, realMadrid, barcelona).slice(-20)
+      );
+
+      const examples = matches.filter((d) =>
+        d.Season === "1928-29" &&
+        (
+          (d.teamA === realMadrid && d.teamB === barcelona) ||
+          (d.teamA === barcelona && d.teamB === realMadrid)
+        )
+      );
+
+      console.log(`Ejemplo concreto ${realMadrid} vs ${barcelona} en 1928-29:`);
+      console.table(examples);
+    } else {
+      console.warn("No se han encontrado Real Madrid y/o Barcelona en el dataset.");
+    }
+
     setupTeamSelector(data);
     setupMetricSelector();
     setupSeasonSelectors(data);
@@ -47,6 +105,7 @@ async function init() {
     setupSuccessControls();
     setupChangesControls();
     setupRegularityControls();
+    setupRivalryControls(data);
     updateStatus();
 
     render();
@@ -65,7 +124,7 @@ async function init() {
     if (chart) {
       chart.innerHTML = `
         <p class="muted">
-          No se ha podido cargar el archivo <code>data/laliga_clean.csv</code>.
+          No se ha podido cargar el archivo <code>data/laliga.csv</code>.
           Revisa que el fichero existe y que estás ejecutando la web desde un servidor local.
         </p>
       `;
@@ -394,6 +453,7 @@ function render() {
   updateSuccessStatus(successSummary);
   updateChangesStatus(changesSummary);
   updateRegularityStatus(regularitySummary);
+  renderRivalrySection();
 }
 
 function updateStatus(data = state.data) {
@@ -496,4 +556,279 @@ function debounce(callback, delay) {
       callback(...args);
     }, delay);
   };
+}
+
+function setupRivalryControls(data) {
+  const teamASelector = document.querySelector("#rivalry-team-a");
+  const teamBSelector = document.querySelector("#rivalry-team-b");
+  const presetButtons = document.querySelectorAll(".rivalry-preset");
+
+  if (!teamASelector || !teamBSelector) {
+    return;
+  }
+
+  const teams = getTeams(data);
+
+  teamASelector.innerHTML = "";
+  teamBSelector.innerHTML = "";
+
+  for (const team of teams) {
+    const optionA = document.createElement("option");
+    optionA.value = team;
+    optionA.textContent = team;
+
+    const optionB = document.createElement("option");
+    optionB.value = team;
+    optionB.textContent = team;
+
+    teamASelector.append(optionA);
+    teamBSelector.append(optionB);
+  }
+
+  const defaultTeamA =
+    findTeamByAlias(data, "Real Madrid") ??
+    teams[0] ??
+    null;
+
+  const defaultTeamB =
+    findTeamByAlias(data, "Barcelona") ??
+    teams.find((team) => team !== defaultTeamA) ??
+    null;
+
+  state.rivalryTeamA = defaultTeamA;
+  state.rivalryTeamB = defaultTeamB;
+
+  syncRivalrySelectors();
+
+  teamASelector.addEventListener("change", () => {
+    const selectedTeam = teamASelector.value;
+
+    if (selectedTeam === state.rivalryTeamB) {
+      state.rivalryTeamB = teams.find((team) => team !== selectedTeam) ?? null;
+    }
+
+    state.rivalryTeamA = selectedTeam;
+    syncRivalrySelectors();
+    render();
+  });
+
+  teamBSelector.addEventListener("change", () => {
+    const selectedTeam = teamBSelector.value;
+
+    if (selectedTeam === state.rivalryTeamA) {
+      state.rivalryTeamA = teams.find((team) => team !== selectedTeam) ?? null;
+    }
+
+    state.rivalryTeamB = selectedTeam;
+    syncRivalrySelectors();
+    render();
+  });
+
+  presetButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const [teamAAlias, teamBAlias] = button.dataset.teams.split("|");
+
+      const teamA = findTeamByAlias(data, teamAAlias);
+      const teamB = findTeamByAlias(data, teamBAlias);
+
+      if (!teamA || !teamB || teamA === teamB) {
+        const message = document.querySelector("#rivalry-message");
+
+        if (message) {
+          message.textContent =
+            "No se ha podido encontrar esa rivalidad en el dataset.";
+        }
+
+        return;
+      }
+
+      state.rivalryTeamA = teamA;
+      state.rivalryTeamB = teamB;
+
+      syncRivalrySelectors();
+      render();
+    });
+  });
+}
+
+function syncRivalrySelectors() {
+  const teamASelector = document.querySelector("#rivalry-team-a");
+  const teamBSelector = document.querySelector("#rivalry-team-b");
+
+  if (teamASelector && state.rivalryTeamA) {
+    teamASelector.value = state.rivalryTeamA;
+  }
+
+  if (teamBSelector && state.rivalryTeamB) {
+    teamBSelector.value = state.rivalryTeamB;
+  }
+}
+
+function renderRivalrySection() {
+  const title = document.querySelector("#rivalry-title");
+  const status = document.querySelector("#rivalry-status");
+  const message = document.querySelector("#rivalry-message");
+  const summaryContainer = document.querySelector("#rivalry-summary");
+
+  if (
+    !title ||
+    !status ||
+    !summaryContainer ||
+    !state.rivalryTeamA ||
+    !state.rivalryTeamB
+  ) {
+    return;
+  }
+
+  if (state.rivalryTeamA === state.rivalryTeamB) {
+    title.textContent = "Selecciona dos equipos distintos";
+    status.textContent = "Rivalidad no válida";
+    summaryContainer.innerHTML = "";
+
+    if (message) {
+      message.textContent = "El Equipo A y el Equipo B no pueden ser el mismo.";
+    }
+
+    return;
+  }
+
+  const summary = aggregateHeadToHead(
+    state.matches,
+    state.rivalryTeamA,
+    state.rivalryTeamB
+  );
+
+  const decadeRows = aggregateRivalryByDecade(
+    state.matches,
+    state.rivalryTeamA,
+    state.rivalryTeamB
+  );
+
+  const cumulativeRows = buildCumulativeBalance(
+    state.matches,
+    state.rivalryTeamA,
+    state.rivalryTeamB
+  );
+
+  title.textContent = `${state.rivalryTeamA} vs ${state.rivalryTeamB}`;
+
+  status.textContent =
+    `${summary.totalMatches} enfrentamientos · ` +
+    `${decadeRows.length} década(s)`;
+
+  if (message) {
+    message.textContent =
+      summary.totalMatches < 10
+        ? "Hay pocos enfrentamientos para esta pareja; interpreta el resultado con cautela."
+        : "";
+  }
+
+  renderRivalrySummaryCards(summary);
+
+  renderRivalryDecadeChart(decadeRows, {
+    container: "#rivalry-decade-chart",
+    teamA: state.rivalryTeamA,
+    teamB: state.rivalryTeamB
+  });
+
+  renderCumulativeBalanceChart(cumulativeRows, {
+    container: "#rivalry-balance-chart",
+    teamA: state.rivalryTeamA,
+    teamB: state.rivalryTeamB
+  });
+
+  console.log(`Rivalidad ${state.rivalryTeamA} vs ${state.rivalryTeamB}`);
+  console.log("Resumen:", summary);
+  console.log("Agregado por década:");
+  console.table(decadeRows);
+  console.log("Balance acumulado:");
+  console.table(cumulativeRows);
+}
+
+function renderRivalrySummaryCards(summary) {
+  const container = document.querySelector("#rivalry-summary");
+
+  if (!container) {
+    return;
+  }
+
+  const bestDecadeForTeamA = formatBestDecadeLabel(
+    summary.bestDecadeForTeamA,
+    summary.teamA
+  );
+
+  const bestDecadeForTeamB = formatBestDecadeLabel(
+    summary.bestDecadeForTeamB,
+    summary.teamB
+  );
+
+  container.innerHTML = `
+    <article class="summary-card">
+      <p class="summary-card__label">Enfrentamientos</p>
+      <p class="summary-card__value">${summary.totalMatches}</p>
+      <p class="summary-card__note">Partidos encontrados en la matriz.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Victorias ${summary.teamA}</p>
+      <p class="summary-card__value">${summary.winsTeamA}</p>
+      <p class="summary-card__note">${summary.pointsTeamA} puntos directos.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Empates</p>
+      <p class="summary-card__value">${summary.draws}</p>
+      <p class="summary-card__note">Partidos sin ganador.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Victorias ${summary.teamB}</p>
+      <p class="summary-card__value">${summary.winsTeamB}</p>
+      <p class="summary-card__note">${summary.pointsTeamB} puntos directos.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Goles ${summary.teamA}</p>
+      <p class="summary-card__value">${summary.goalsTeamA}</p>
+      <p class="summary-card__note">Marcados en enfrentamientos directos.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Goles ${summary.teamB}</p>
+      <p class="summary-card__value">${summary.goalsTeamB}</p>
+      <p class="summary-card__note">Marcados en enfrentamientos directos.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Diferencia de goles</p>
+      <p class="summary-card__value">${formatSignedNumber(summary.goalDiffTeamA)}</p>
+      <p class="summary-card__note">Desde la perspectiva de ${summary.teamA}.</p>
+    </article>
+
+    <article class="summary-card">
+      <p class="summary-card__label">Décadas favorables</p>
+      <p class="summary-card__value">${bestDecadeForTeamA}</p>
+      <p class="summary-card__note">${bestDecadeForTeamB}</p>
+    </article>
+  `;
+}
+
+function formatBestDecadeLabel(row, team) {
+  if (!row) {
+    return "Sin dato";
+  }
+
+  return `${team}: ${row.decade}s`;
+}
+
+function formatSignedNumber(value) {
+  if (!Number.isFinite(value)) {
+    return "Sin dato";
+  }
+
+  if (value > 0) {
+    return `+${value}`;
+  }
+
+  return String(value);
 }

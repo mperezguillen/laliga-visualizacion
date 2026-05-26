@@ -388,6 +388,81 @@
         </div>
       </div>
     </section>
+
+    <section class="section section--chart" id="rivalidades-resistencias">
+      <div class="section__header">
+        <p class="section__kicker">07 · Rivalidades y resistencias</p>
+        <h2>¿Cómo cambia el equilibrio entre dos equipos?</h2>
+
+        <p>
+          Las posiciones finales muestran quién domina una temporada, pero los enfrentamientos
+          directos permiten ver contra quién se construye o se debilita ese dominio.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="controls card">
+          <h3>Elegir rivalidad</h3>
+
+          <div class="control-group">
+            <label for="rivalry-team-a">Equipo A</label>
+            <select id="rivalry-team-a" class="compact-select"></select>
+          </div>
+
+          <div class="control-group">
+            <label for="rivalry-team-b">Equipo B</label>
+            <select id="rivalry-team-b" class="compact-select"></select>
+          </div>
+
+          <div class="control-group">
+            <label>Rivalidades sugeridas</label>
+
+            <div class="button-stack">
+              <button class="secondary-button rivalry-preset" data-teams="Real Madrid|Barcelona">
+                Real Madrid vs Barcelona
+              </button>
+
+              <button class="secondary-button rivalry-preset" data-teams="Real Madrid|Atlético Madrid">
+                Real Madrid vs Atlético
+              </button>
+
+              <button class="secondary-button rivalry-preset" data-teams="Barcelona|Atlético Madrid">
+                Barcelona vs Atlético
+              </button>
+
+              <button class="secondary-button rivalry-preset" data-teams="Sevilla|Betis">
+                Sevilla vs Betis
+              </button>
+
+              <button class="secondary-button rivalry-preset" data-teams="Athletic Club|Real Sociedad">
+                Athletic Club vs Real Sociedad
+              </button>
+            </div>
+          </div>
+
+          <p id="rivalry-message" class="small muted"></p>
+        </aside>
+
+        <div class="chart-card card">
+          <div class="chart-card__header">
+            <h3 id="rivalry-title">Balance histórico</h3>
+            <p id="rivalry-status" class="small muted">Cargando datos...</p>
+          </div>
+
+          <div id="rivalry-summary" class="summary-grid"></div>
+
+          <div class="chart-block">
+            <h3>Resultados por década</h3>
+            <div id="rivalry-decade-chart" class="chart" aria-live="polite"></div>
+          </div>
+
+          <div class="chart-block">
+            <h3>Balance acumulado</h3>
+            <div id="rivalry-balance-chart" class="chart" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
