@@ -8,7 +8,7 @@
 
   <meta
     name="description"
-    content="Visualización interactiva sobre la evolución histórica del poder competitivo en LaLiga española."
+    content="Visualización interactiva sobre los ciclos de poder, rivalidades y trayectorias históricas de LaLiga española."
   />
 
   <link rel="stylesheet" href="./css/styles.css" />
@@ -26,9 +26,10 @@
       </p>
 
       <p class="hero__text">
-        Esta visualización analiza la Liga española como una historia de poder competitivo:
-        qué clubes dominaron cada etapa, cuáles fueron regulares durante décadas y cómo han
-        cambiado los equilibrios deportivos a lo largo del tiempo.
+        Esta visualización explora casi un siglo de LaLiga desde una perspectiva histórica
+        y relacional. El objetivo no es solo identificar qué equipos ganaron más, sino
+        comprender cómo se formaron los ciclos de dominio, qué trayectorias se rompieron
+        y qué rivalidades ayudaron a definir el equilibrio competitivo de la competición.
       </p>
     </div>
   </header>
@@ -36,8 +37,8 @@
   <main>
     <section class="section section--intro">
       <div class="section__header">
-        <p class="section__kicker">01 · Contexto</p>
-        <h2>Un siglo de competición, con una interrupción histórica</h2>
+        <p class="section__kicker">Contexto narrativo</p>
+        <h2>Casi un siglo de competición, con una interrupción histórica</h2>
       </div>
 
       <div class="card">
@@ -48,6 +49,22 @@
           <strong>1938-39</strong>, correspondientes al periodo de la Guerra Civil española.
         </p>
 
+        <p>
+          El proyecto analiza los ciclos de poder en LaLiga combinando tres perspectivas:
+          la evolución de las posiciones, los dominios por épocas y las relaciones directas
+          entre equipos. La matriz de resultados permite ir más allá de la clasificación final
+          y estudiar el poder competitivo como una red de rivalidades, resistencias y
+          enfrentamientos históricos.
+        </p>
+
+        <ol class="key-questions">
+          <li>¿Cómo evolucionaron las posiciones de los grandes equipos?</li>
+          <li>¿Qué clubes dominaron cada década?</li>
+          <li>¿Qué caídas y recuperaciones rompieron la continuidad histórica?</li>
+          <li>¿Cómo cambiaron las rivalidades directas entre equipos?</li>
+          <li>¿Qué relaciones competitivas forman la red histórica de LaLiga?</li>
+        </ol>
+
         <div class="timeline-note">
           <span>1929-30</span>
           <span class="timeline-gap">1936-39 · interrupción</span>
@@ -56,14 +73,15 @@
       </div>
     </section>
 
-    <section class="section section--chart">
+    <section class="section section--chart" id="evolucion-historica">
       <div class="section__header">
-        <p class="section__kicker">02 · Evolución histórica</p>
+        <p class="section__kicker">01 · Evolución histórica</p>
         <h2>¿Cómo han cambiado las posiciones de los grandes equipos?</h2>
 
         <p>
-          El siguiente gráfico muestra la posición final de los equipos seleccionados en cada
-          temporada. Cuanto más arriba aparece una línea, mejor fue la clasificación del equipo.
+          Esta vista muestra la evolución de la posición final de los equipos seleccionados
+          a lo largo de las temporadas. Permite identificar etapas de dominio, caídas prolongadas,
+          recuperaciones y cambios de estabilidad competitiva.
         </p>
       </div>
 
@@ -74,10 +92,10 @@
           <div class="control-group">
             <label for="metric-select">Métrica</label>
             <select id="metric-select" aria-label="Selector de métrica">
-            <option value="Position">Posición final</option>
-            <option value="Points">Puntos</option>
-            <option value="WinRate">Porcentaje de victorias</option>
-            <option value="Performance">Performance</option>
+              <option value="Position">Posición final</option>
+              <option value="Points">Puntos</option>
+              <option value="WinRate">Porcentaje de victorias</option>
+              <option value="Performance">Performance</option>
             </select>
           </div>
 
@@ -85,8 +103,8 @@
             <label>Rango temporal</label>
 
             <div class="range-controls">
-            <select id="start-season" aria-label="Temporada inicial"></select>
-            <select id="end-season" aria-label="Temporada final"></select>
+              <select id="start-season" aria-label="Temporada inicial"></select>
+              <select id="end-season" aria-label="Temporada final"></select>
             </div>
           </div>
 
@@ -94,13 +112,13 @@
             <label for="team-select">Equipos</label>
 
             <p class="small">
-            Selecciona uno o varios equipos para compararlos.
+              Selecciona uno o varios equipos para compararlos.
             </p>
 
             <select id="team-select" multiple size="10" aria-label="Selector de equipos"></select>
 
             <p class="small muted">
-            Consejo: usa Ctrl/Cmd para seleccionar varios equipos.
+              Consejo: usa Ctrl/Cmd para seleccionar varios equipos.
             </p>
           </div>
 
@@ -108,21 +126,21 @@
             <label>Comparaciones rápidas</label>
 
             <div class="button-stack">
-            <button class="secondary-button quick-compare" data-teams="Real Madrid|Barcelona">
+              <button class="secondary-button quick-compare" data-teams="Real Madrid|Barcelona">
                 Real Madrid vs Barcelona
-            </button>
+              </button>
 
-            <button class="secondary-button quick-compare" data-teams="Real Madrid|Barcelona|Atlético Madrid">
+              <button class="secondary-button quick-compare" data-teams="Real Madrid|Barcelona|Atlético Madrid">
                 Tres grandes históricos
-            </button>
+              </button>
 
-            <button class="secondary-button quick-compare" data-teams="Valencia|Sevilla|Athletic Club">
+              <button class="secondary-button quick-compare" data-teams="Valencia|Sevilla|Athletic Club">
                 Alternativas históricas
-            </button>
+              </button>
 
-            <button id="reset-selection" class="secondary-button">
+              <button id="reset-selection" class="secondary-button">
                 Selección inicial
-            </button>
+              </button>
             </div>
           </div>
         </aside>
@@ -140,13 +158,13 @@
 
     <section class="section section--chart" id="eras-dominio">
       <div class="section__header">
-        <p class="section__kicker">03 · Eras de dominio</p>
+        <p class="section__kicker">02 · Eras de dominio</p>
         <h2>¿Qué equipos dominaron cada década?</h2>
 
         <p>
-          El heatmap resume el dominio competitivo por décadas. Cada fila representa un equipo
-          y cada columna una década. Las celdas más intensas indican una presencia más fuerte
-          en la zona alta de la clasificación.
+          El mapa de calor resume el dominio competitivo por décadas. En lugar de observar
+          temporadas aisladas, esta vista permite detectar ciclos históricos de poder y clubes
+          con presencia recurrente en la zona alta de la clasificación.
         </p>
       </div>
 
@@ -202,63 +220,15 @@
       </div>
     </section>
 
-    <section class="section section--chart" id="concentracion-exito">
-      <div class="section__header">
-        <p class="section__kicker">04 · Concentración del éxito</p>
-        <h2>¿LaLiga ha sido cada vez más concentrada?</h2>
-
-        <p>
-          Esta sección analiza si el éxito deportivo se repartió entre muchos clubes o si,
-          por el contrario, quedó concentrado en unos pocos equipos. La lectura por décadas
-          permite distinguir etapas más abiertas de periodos de dominio más cerrado.
-        </p>
-      </div>
-
-      <div class="layout">
-        <aside class="controls card">
-          <h3>Indicador</h3>
-
-          <div class="control-group">
-            <label for="success-metric-select">Métrica de concentración</label>
-
-            <select
-              id="success-metric-select"
-              class="compact-select"
-              aria-label="Selector de métrica de concentración"
-            >
-              <option value="uniqueChampions">Campeones distintos</option>
-              <option value="uniqueTop3Teams">Equipos distintos en top 3</option>
-              <option value="top3Concentration">Concentración del top 3</option>
-              <option value="championConcentration">Concentración de títulos</option>
-            </select>
-          </div>
-
-          <div class="metric-explanation small muted" id="success-metric-description">
-            Cuantos más campeones distintos aparecen en una década, más abierto fue el reparto
-            de títulos.
-          </div>
-        </aside>
-
-        <div class="chart-card card">
-          <div class="chart-card__header">
-            <h3>Apertura y concentración por década</h3>
-            <p id="success-status" class="small muted">Cargando datos...</p>
-          </div>
-
-          <div id="success-concentration-chart" class="chart" aria-live="polite"></div>
-        </div>
-      </div>
-    </section>
-
     <section class="section section--chart" id="caidas-recuperaciones">
       <div class="section__header">
-        <p class="section__kicker">05 · Caídas y recuperaciones</p>
-        <h2>Grandes caídas y recuperaciones históricas</h2>
+        <p class="section__kicker">03 · Caídas y recuperaciones</p>
+        <h2>¿Dónde se rompieron las trayectorias?</h2>
 
         <p>
-          Esta sección identifica los mayores cambios de rendimiento de un equipo entre
-          dos temporadas consecutivas. La comparación evita unir temporadas separadas por
-          huecos históricos o por ausencias del equipo en Primera División.
+          El poder competitivo no siempre evoluciona de forma lineal. Esta sección identifica
+          los mayores cambios entre temporadas consecutivas, destacando recuperaciones rápidas,
+          caídas bruscas y momentos de ruptura en la trayectoria de los equipos.
         </p>
       </div>
 
@@ -325,78 +295,16 @@
       </div>
     </section>
 
-    <section class="section section--chart" id="regularidad-dominio">
-      <div class="section__header">
-        <p class="section__kicker">06 · Regularidad histórica</p>
-        <h2>Regularidad frente a dominio</h2>
-
-        <p>
-          No todos los equipos históricos han seguido el mismo patrón. Algunos dominaron durante
-          muchas temporadas, otros fueron muy regulares sin ganar tanto, y otros alternaron grandes
-          campañas con caídas pronunciadas. Este gráfico resume esas trayectorias.
-        </p>
-      </div>
-
-      <div class="layout">
-        <aside class="controls card">
-          <h3>Lectura del gráfico</h3>
-
-          <div class="control-group">
-            <label for="regularity-min-seasons">Temporadas mínimas</label>
-
-            <select
-              id="regularity-min-seasons"
-              class="compact-select"
-              aria-label="Selector de temporadas mínimas"
-            >
-              <option value="1">Todas</option>
-              <option value="5">Mínimo 5 temporadas</option>
-              <option value="10" selected>Mínimo 10 temporadas</option>
-              <option value="20">Mínimo 20 temporadas</option>
-              <option value="40">Mínimo 40 temporadas</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="regularity-label-count">Etiquetas visibles</label>
-
-            <select
-              id="regularity-label-count"
-              class="compact-select"
-              aria-label="Selector de etiquetas visibles"
-            >
-              <option value="0">Sin etiquetas</option>
-              <option value="8">Top 8</option>
-              <option value="12" selected>Top 12</option>
-              <option value="20">Top 20</option>
-            </select>
-          </div>
-
-          <div class="metric-explanation small muted">
-            Cuanto más a la izquierda, mejor posición media histórica. Cuanto más abajo,
-            menor variabilidad y mayor regularidad. El tamaño representa el número de temporadas.
-          </div>
-        </aside>
-
-        <div class="chart-card card">
-          <div class="chart-card__header">
-            <h3>Mapa histórico de trayectorias competitivas</h3>
-            <p id="regularity-status" class="small muted">Cargando datos...</p>
-          </div>
-
-          <div id="regularity-scatter-chart" class="chart" aria-live="polite"></div>
-        </div>
-      </div>
-    </section>
-
     <section class="section section--chart" id="rivalidades-resistencias">
       <div class="section__header">
-        <p class="section__kicker">07 · Rivalidades y resistencias</p>
-        <h2>¿Cómo cambia el equilibrio entre dos equipos?</h2>
+        <p class="section__kicker">04 · Rivalidades y resistencias</p>
+        <h2>¿Contra quién se construye el dominio?</h2>
 
         <p>
-          Las posiciones finales muestran quién domina una temporada, pero los enfrentamientos
-          directos permiten ver contra quién se construye o se debilita ese dominio.
+          Las clasificaciones finales muestran quién domina una temporada, pero los enfrentamientos
+          directos permiten ver contra qué rivales se construye o se debilita ese dominio. Esta
+          sección utiliza la matriz de resultados para analizar el equilibrio histórico entre dos
+          equipos.
         </p>
       </div>
 
@@ -445,7 +353,7 @@
 
         <div class="chart-card card">
           <div class="chart-card__header">
-            <h3 id="rivalry-title">Balance histórico</h3>
+            <h3 id="rivalry-title">Balance histórico directo</h3>
             <p id="rivalry-status" class="small muted">Cargando datos...</p>
           </div>
 
@@ -455,30 +363,25 @@
             <h3>Resultados por década</h3>
             <div id="rivalry-decade-chart" class="chart" aria-live="polite"></div>
           </div>
-
-          <div class="chart-block">
-            <h3>Balance acumulado</h3>
-            <div id="rivalry-balance-chart" class="chart" aria-live="polite"></div>
-          </div>
         </div>
       </div>
     </section>
 
     <section class="section section--chart" id="red-enfrentamientos">
       <div class="section__header">
-        <p class="section__kicker">08 · Red histórica</p>
-        <h2>Red de enfrentamientos históricos</h2>
+        <p class="section__kicker">05 · Red histórica</p>
+        <h2>LaLiga como red de rivalidades</h2>
 
         <p>
-          Esta red representa LaLiga como un sistema de relaciones competitivas.
-          Cada nodo es un equipo y cada enlace resume sus enfrentamientos históricos.
-          El objetivo no es mostrar todos los partidos, sino detectar qué rivalidades
-          han sido más frecuentes, intensas o equilibradas.
+          Esta red representa LaLiga como un sistema de relaciones competitivas. Cada nodo es
+          un equipo y cada enlace resume sus enfrentamientos históricos. El objetivo no es
+          mostrar todos los partidos, sino detectar qué rivalidades han sido más frecuentes,
+          intensas o equilibradas.
         </p>
 
         <p class="small muted">
-          Esta visualización es exploratoria: los filtros ayudan a reducir la complejidad
-          y hacer visibles las relaciones más relevantes.
+          Visualización exploratoria: los filtros ayudan a reducir la complejidad y hacer visibles
+          las relaciones más relevantes.
         </p>
       </div>
 
@@ -552,10 +455,10 @@
             </button>
           </div>
 
-          <p class="small muted">
-            El tamaño del nodo representa temporadas disputadas. El grosor del enlace
-            representa número de enfrentamientos. Haz clic en un enlace para enviar esa
-            rivalidad a la sección anterior.
+          <p class="small muted network-help">
+            El tamaño del nodo representa la presencia histórica del equipo. El grosor del enlace
+            representa el número de enfrentamientos. Haz clic en un enlace para enviar esa rivalidad
+            a la sección anterior.
           </p>
         </aside>
 

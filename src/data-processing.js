@@ -283,26 +283,6 @@ export function aggregateRivalryByDecade(matches, teamA, teamB) {
   return Array.from(groups.values()).sort((a, b) => a.decade - b.decade);
 }
 
-export function buildCumulativeBalance(matches, teamA, teamB) {
-  let balance = 0;
-
-  return getHeadToHeadMatches(matches, teamA, teamB)
-    .map((match) => {
-      const view = orientMatch(match, teamA, teamB);
-
-      if (view.resultForTeamA === "win") {
-        balance += 1;
-      } else if (view.resultForTeamA === "loss") {
-        balance -= 1;
-      }
-
-      return {
-        ...view,
-        cumulativeBalance: balance
-      };
-    });
-}
-
 export function buildNetworkData(matches, options = {}) {
   const {
     teamStatsData = [],

@@ -111,6 +111,19 @@ h3 {
   padding: 24px;
 }
 
+.key-questions {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding-left: 22px;
+  color: var(--color-muted);
+}
+
+.key-questions li::marker {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
 .timeline-note {
   display: flex;
   gap: 12px;
@@ -309,10 +322,6 @@ label {
   }
 }
 
-#success-concentration-chart {
-  min-height: 430px;
-}
-
 .metric-explanation {
   padding: 14px;
   border-radius: 14px;
@@ -325,14 +334,6 @@ label {
 }
 
 #historical-changes-chart svg {
-  max-width: none;
-}
-
-#regularity-scatter-chart {
-  min-height: 520px;
-}
-
-#regularity-scatter-chart svg {
   max-width: none;
 }
 
@@ -379,8 +380,7 @@ label {
   border-top: 1px solid var(--color-border);
 }
 
-#rivalry-decade-chart,
-#rivalry-balance-chart {
+#rivalry-decade-chart {
   min-height: 360px;
 }
 
@@ -396,14 +396,19 @@ label {
   }
 }
 
-#rivalry-decade-chart svg,
-#rivalry-balance-chart svg {
+#rivalry-decade-chart svg {
   max-width: none;
 }
 
-#rivalry-decade-chart,
-#rivalry-balance-chart {
+#rivalry-decade-chart {
   overflow-x: auto;
+}
+
+.network-help {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f4f1e8;
+  border: 1px solid var(--color-border);
 }
 
 .network-chart {

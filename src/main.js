@@ -4,17 +4,13 @@ import {
   validateMatrixTransformation,
   aggregateHeadToHead,
   aggregateRivalryByDecade,
-  buildCumulativeBalance,
   buildNetworkData
 } from "./data-processing.js";
 import {
   renderBumpChart,
   renderDominanceHeatmap,
-  renderSuccessConcentrationChart,
   renderHistoricalChangesChart,
-  renderRegularityScatterChart,
   renderRivalryDecadeChart,
-  renderCumulativeBalanceChart,
   renderNetworkGraph
 } from "./charts.js";
 
@@ -27,12 +23,9 @@ const state = {
   endYear: null,
   dominanceMetric: "top3Share",
   dominanceTopN: 12,
-  successMetric: "uniqueChampions",
   changeType: "recoveries",
   changeMetric: "Performance",
   changeTopN: 10,
-  regularityMinSeasons: 10,
-  regularityLabelCount: 12,
   rivalryTeamA: null,
   rivalryTeamB: null,
   networkData: null,
@@ -104,11 +97,6 @@ async function init() {
         aggregateRivalryByDecade(matches, realMadrid, barcelona)
       );
 
-      console.log("Balance acumulado:");
-      console.table(
-        buildCumulativeBalance(matches, realMadrid, barcelona).slice(-20)
-      );
-
       const examples = matches.filter((d) =>
         d.Season === "1928-29" &&
         (
@@ -128,9 +116,7 @@ async function init() {
     setupSeasonSelectors(data);
     setupQuickCompareButtons(data);
     setupDominanceControls();
-    setupSuccessControls();
     setupChangesControls();
-    setupRegularityControls();
     setupRivalryControls(data);
     setupNetworkControls(data);
     updateStatus();
@@ -318,21 +304,6 @@ function updateDominanceStatus(summary) {
     `${summary.metricLabel}`;
 }
 
-function setupSuccessControls() {
-  const metricSelector = document.querySelector("#success-metric-select");
-
-  if (!metricSelector) {
-    return;
-  }
-
-  metricSelector.value = state.successMetric;
-
-  metricSelector.addEventListener("change", () => {
-    state.successMetric = metricSelector.value;
-    render();
-  });
-}
-
 function setupChangesControls() {
   const changeTypeSelector = document.querySelector("#change-type-select");
   const changeMetricSelector = document.querySelector("#change-metric-select");
@@ -366,42 +337,6 @@ function setupChangesControls() {
   }
 }
 
-function setupRegularityControls() {
-  const minSeasonsSelector = document.querySelector("#regularity-min-seasons");
-  const labelCountSelector = document.querySelector("#regularity-label-count");
-
-  if (minSeasonsSelector) {
-    minSeasonsSelector.value = String(state.regularityMinSeasons);
-
-    minSeasonsSelector.addEventListener("change", () => {
-      state.regularityMinSeasons = Number(minSeasonsSelector.value);
-      render();
-    });
-  }
-
-  if (labelCountSelector) {
-    labelCountSelector.value = String(state.regularityLabelCount);
-
-    labelCountSelector.addEventListener("change", () => {
-      state.regularityLabelCount = Number(labelCountSelector.value);
-      render();
-    });
-  }
-}
-
-function updateRegularityStatus(summary) {
-  const status = document.querySelector("#regularity-status");
-
-  if (!status || !summary) {
-    return;
-  }
-
-  status.textContent =
-    `${summary.teams} equipos · ` +
-    `mínimo ${summary.minSeasons} temporada(s) · ` +
-    `${summary.labelCount} etiquetas`;
-}
-
 function updateChangesStatus(summary) {
   const status = document.querySelector("#changes-status");
   const description = document.querySelector("#change-metric-description");
@@ -428,20 +363,6 @@ function getFilteredData() {
   });
 }
 
-function updateSuccessStatus(summary) {
-  const status = document.querySelector("#success-status");
-  const description = document.querySelector("#success-metric-description");
-
-  if (status && summary) {
-    status.textContent =
-      `${summary.decades} décadas · ${summary.metricLabel}`;
-  }
-
-  if (description && summary) {
-    description.textContent = summary.description;
-  }
-}
-
 function render() {
   const filteredData = getFilteredData();
 
@@ -457,11 +378,6 @@ function render() {
     topN: state.dominanceTopN
   });
 
-  const successSummary = renderSuccessConcentrationChart(state.data, {
-    container: "#success-concentration-chart",
-    metric: state.successMetric
-  });
-
   const changesSummary = renderHistoricalChangesChart(state.data, {
     container: "#historical-changes-chart",
     metric: state.changeMetric,
@@ -469,17 +385,9 @@ function render() {
     topN: state.changeTopN
   });
 
-  const regularitySummary = renderRegularityScatterChart(state.data, {
-    container: "#regularity-scatter-chart",
-    minSeasons: state.regularityMinSeasons,
-    labelCount: state.regularityLabelCount
-  });
-
   updateStatus(filteredData);
   updateDominanceStatus(dominanceSummary);
-  updateSuccessStatus(successSummary);
   updateChangesStatus(changesSummary);
-  updateRegularityStatus(regularitySummary);
   renderRivalrySection();
   renderNetworkSection();
 }
@@ -732,12 +640,6 @@ function renderRivalrySection() {
     state.rivalryTeamB
   );
 
-  const cumulativeRows = buildCumulativeBalance(
-    state.matches,
-    state.rivalryTeamA,
-    state.rivalryTeamB
-  );
-
   title.textContent = `${state.rivalryTeamA} vs ${state.rivalryTeamB}`;
 
   status.textContent =
@@ -759,18 +661,10 @@ function renderRivalrySection() {
     teamB: state.rivalryTeamB
   });
 
-  renderCumulativeBalanceChart(cumulativeRows, {
-    container: "#rivalry-balance-chart",
-    teamA: state.rivalryTeamA,
-    teamB: state.rivalryTeamB
-  });
-
   console.log(`Rivalidad ${state.rivalryTeamA} vs ${state.rivalryTeamB}`);
   console.log("Resumen:", summary);
   console.log("Agregado por década:");
   console.table(decadeRows);
-  console.log("Balance acumulado:");
-  console.table(cumulativeRows);
 }
 
 function renderRivalrySummaryCards(summary) {
