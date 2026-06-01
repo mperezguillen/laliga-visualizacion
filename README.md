@@ -43,3 +43,12 @@ Archivo utilizado por la aplicación:
 
 ```text
 data/laliga_cleaned.csv
+```
+
+## Declaración de uso de inteligencia artificial
+
+Para la realización de este proyecto se ha empleado ChatGPT como herramienta de apoyo durante el proceso de desarrollo. Su uso ha estado orientado principalmente a la asistencia en la implementación y revisión de código HTML, CSS y JavaScript.
+
+La herramienta también se ha utilizado como apoyo en tareas de depuración, documentación y preparación de materiales auxiliares. En todos los casos, las propuestas generadas han sido revisadas, modificadas y validadas por el autor.
+
+Las decisiones relativas al enfoque analítico, la selección de las visualizaciones finales, la interpretación de los datos, la narrativa del proyecto y la entrega definitiva corresponden al autor del trabajo.
