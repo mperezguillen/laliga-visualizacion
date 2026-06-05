@@ -4,6 +4,20 @@ Visualización interactiva sobre la evolución histórica del poder competitivo 
 
 El proyecto analiza casi un siglo de competición desde una perspectiva histórica y relacional. El objetivo no es solo identificar qué equipos ganaron más, sino comprender cómo se formaron los ciclos de dominio, qué trayectorias se rompieron y qué rivalidades ayudaron a definir el equilibrio competitivo de la competición.
 
+## Visualización publicada
+
+La visualización está disponible públicamente en GitHub Pages:
+
+```text
+https://mperezguillen.github.io/laliga-visualizacion/
+```
+
+El repositorio público del proyecto se encuentra en:
+
+```text
+https://github.com/mperezguillen/laliga-visualizacion
+```
+
 ## Objetivo narrativo
 
 La visualización se centra en analizar los ciclos de poder de LaLiga combinando tres perspectivas:
@@ -43,6 +57,52 @@ Archivo utilizado por la aplicación:
 
 ```text
 data/laliga_cleaned.csv
+```
+
+## Tecnologías utilizadas
+
+- HTML5
+- CSS3
+- JavaScript
+- D3.js
+- Observable Plot
+- GitHub Pages
+
+## Ejecución en local
+
+Para ejecutar la visualización en local, clonar el repositorio y lanzar un servidor web desde la raíz del proyecto:
+
+```bash
+python -m http.server 8000
+```
+
+Después, abrir en el navegador:
+
+```text
+http://localhost:8000
+```
+
+Es importante ejecutar la web mediante un servidor local y no abriendo directamente `index.html`, ya que la carga de archivos CSV puede dar problemas por restricciones del navegador.
+
+## Estructura del proyecto
+
+```text
+.
+├── index.html
+├── css/
+│   └── styles.css
+├── src/
+│   ├── main.js
+│   ├── charts.js
+│   └── data-processing.js
+├── data/
+│   └── laliga_cleaned.csv
+├── assets/
+│   └── screenshots/
+├── scripts/
+│   └── review_team_names.py
+├── README.md
+└── LICENSE
 ```
 
 ## Declaración de uso de inteligencia artificial
