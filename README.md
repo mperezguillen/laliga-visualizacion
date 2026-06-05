@@ -96,14 +96,16 @@ Es importante ejecutar la web mediante un servidor local y no abriendo directame
 │   ├── charts.js
 │   └── data-processing.js
 ├── data/
+│   ├── laliga.csv
 │   └── laliga_cleaned.csv
-├── assets/
-│   └── screenshots/
-├── scripts/
-│   └── review_team_names.py
+├── requirements.txt
 ├── README.md
 └── LICENSE
 ```
+
+## Licencia
+
+Este proyecto se distribuye bajo licencia MIT. Consulta el archivo `LICENSE` para más información.
 
 ## Declaración de uso de inteligencia artificial
 
